@@ -9,6 +9,17 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
+    CODE_SIGNING_ALLOWED: "NO"
+
+schemes:
+  RadioLibre:
+    build:
+      targets:
+        RadioLibre: all
+    test:
+      targets:
+        - RadioLibreTests
+      gatherCoverageData: true
 
 targets:
   RadioLibre:
@@ -32,7 +43,7 @@ targets:
         CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
         CFBundleInfoDictionaryVersion: "6.0"
         CFBundleName: $(PRODUCT_NAME)
-        CFBundlePackageType: $(PRODUCT_TYPE)
+        CFBundlePackageType: APPL
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true

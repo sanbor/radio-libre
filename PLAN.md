@@ -1184,6 +1184,11 @@ struct RadioLibreApp: App {
 - **`await` inside `XCTAssertEqual` autoclosures causes compiler errors** — must extract the async result to a local variable first, then assert on it.
 - **`RecentStationsView` uses its own `RecentStationRow`** (private struct) instead of `StationRowView` because history rows need relative timestamps instead of tags, and the data source is `HistoryEntry` not `StationDTO`.
 
+**Implementation notes (Build Fix):**
+- **Missing shared scheme:** XcodeGen was not generating a shared `.xcscheme` file because `project.yml` had no `schemes:` section. Without a shared scheme, `xcodebuild -scheme RadioLibre` fails with "Supported platforms for the buildables in the current scheme is empty." Fix: add an explicit `schemes:` block to `project.yml` with build targets and test targets.
+- **Code signing failure on simulator:** Building for simulator failed with "Signing for RadioLibre requires a development team." Fix: add `CODE_SIGNING_ALLOWED: "NO"` to the base project settings in `project.yml`. This is appropriate for CI and simulator-only builds.
+- **`CFBundlePackageType` warning:** Using `$(PRODUCT_TYPE)` expands to `com.apple.product-type.application` which is not a valid four-character string. Fix: hardcode `APPL` instead.
+
 ### Phase 5: Player UI & Image Cache
 **Goal:** Full player sheet, AirPlay, station detail, favicon caching.
 

@@ -8,6 +8,8 @@ final class PlayerViewModelTests: XCTestCase {
     private var discovery: ServerDiscoveryService!
     private var radioBrowserService: RadioBrowserService!
     private var audioService: AudioPlayerService!
+    private var historyService: HistoryService!
+    private var historyDefaults: UserDefaults!
     private var vm: PlayerViewModel!
 
     override func setUp() async throws {
@@ -24,9 +26,14 @@ final class PlayerViewModelTests: XCTestCase {
             nowPlayingService: nowPlayingService
         )
 
+        historyDefaults = UserDefaults(suiteName: "PlayerViewModelTests")!
+        historyDefaults.removePersistentDomain(forName: "PlayerViewModelTests")
+        historyService = HistoryService(defaults: historyDefaults)
+
         vm = PlayerViewModel(
             audioService: audioService,
-            radioBrowserService: radioBrowserService
+            radioBrowserService: radioBrowserService,
+            historyService: historyService
         )
 
         // Default mock handler for click tracking
@@ -41,6 +48,7 @@ final class PlayerViewModelTests: XCTestCase {
 
     override func tearDown() {
         MockURLProtocol.requestHandler = nil
+        historyDefaults.removePersistentDomain(forName: "PlayerViewModelTests")
     }
 
     // MARK: - Initial State
