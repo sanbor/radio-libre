@@ -169,8 +169,8 @@ final class PlayerViewModelTests: XCTestCase {
         let station = TestFixtures.makeStation(uuid: "history-test", name: "History Station")
         vm.play(station: station)
 
-        // Wait for the fire-and-forget Task inside play() to complete
-        try await Task.sleep(nanoseconds: 100_000_000)
+        // Await the history write task instead of sleeping — Task.sleep is flaky on CI runners
+        await vm.historyTask?.value
 
         let entries = await historyService.allEntries()
         XCTAssertEqual(entries.count, 1)

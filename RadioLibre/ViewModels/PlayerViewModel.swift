@@ -7,6 +7,8 @@ final class PlayerViewModel: ObservableObject {
     private let radioBrowserService: RadioBrowserService
     private let historyService: HistoryService
     private var cancellable: AnyCancellable?
+    /// Exposed for testing – lets callers await the fire-and-forget history write.
+    private(set) var historyTask: Task<Void, Never>?
 
     @MainActor
     init(
@@ -53,7 +55,7 @@ final class PlayerViewModel: ObservableObject {
 
     func play(station: StationDTO) {
         audioService.play(station: station)
-        Task {
+        historyTask = Task {
             await historyService.recordPlay(station: station)
         }
     }
