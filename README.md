@@ -12,9 +12,10 @@ iOS counterpart to [RadioDroid](https://github.com/segler-alex/RadioDroid) (Andr
 
 This app is being built mostly using Claude Code. Relevant files:
 
-- [SPEC.md](SPEC.md) — this is the behavioral truth. Every UI behavior, API call, and edge case defined here.
-- [PLAN.md](PLAN.md) — this is the architectural guide. It defines the file structure, patterns, and phased delivery.
+- [SPEC.md](SPEC.md) - this is the behavioral truth. Every UI behavior, API call, and edge case defined here.
+- [PLAN.md](PLAN.md) - this is the architectural guide. It defines the file structure, patterns, and phased delivery.
 - [.claude/commands/implement.md](.claude/commands/implement.md) - Skill to implement new features by running `/implement audio playback`.
+- [.claude/commands/init.md](.claude/commands/init.md) - Skill to start a new project by running `/init an iPhone app powered by Radio Browser similar to RadioDroid"`.
 
 ### Prerequisites
 
