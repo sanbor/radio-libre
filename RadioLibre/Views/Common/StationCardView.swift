@@ -30,5 +30,8 @@ struct StationCardView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(station.name)
+        .accessibilityHint("Double tap to play")
     }
 }

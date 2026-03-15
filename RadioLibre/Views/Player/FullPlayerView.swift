@@ -95,6 +95,9 @@ struct FullPlayerView: View {
                     .font(.subheadline)
                 }
                 .tint(.pink)
+                .accessibilityLabel(
+                    favoritesVM.isFavorite(stationuuid: station.stationuuid) ? "Remove from Favorites" : "Add to Favorites"
+                )
 
                 Button {
                     Task {
@@ -121,12 +124,7 @@ struct FullPlayerView: View {
             if !station.tagList.isEmpty {
                 FlowLayout(spacing: 6) {
                     ForEach(station.tagList, id: \.self) { tag in
-                        Text(tag)
-                            .font(.caption)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Color(.systemGray5))
-                            .clipShape(Capsule())
+                        TagChipView(tag: tag)
                     }
                 }
             }

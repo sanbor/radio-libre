@@ -71,6 +71,7 @@ struct MiniPlayerView: View {
                 .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(playerVM.isPlaying ? "Pause" : "Play")
 
             // Stop button
             Button {
@@ -81,6 +82,7 @@ struct MiniPlayerView: View {
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Stop")
         }
         .padding(.horizontal)
         .padding(.vertical, 8)

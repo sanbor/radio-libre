@@ -2,10 +2,21 @@ import SwiftUI
 
 struct StationRowView: View {
     @EnvironmentObject private var favoritesVM: FavoritesViewModel
+    @EnvironmentObject private var playerVM: PlayerViewModel
+    @Environment(\.openURL) private var openURL
 
     let station: StationDTO
     var isConnecting: Bool = false
     var onTap: (() -> Void)?
+
+    private var stationAccessibilityLabel: String {
+        var parts = [station.name]
+        if let codec = station.codec, !codec.isEmpty { parts.append(codec) }
+        if let bitrate = station.bitrate, bitrate > 0 { parts.append("\(bitrate) kbps") }
+        if let country = station.country, !country.isEmpty { parts.append(country) }
+        if isConnecting { parts.append("Connecting") }
+        return parts.joined(separator: ", ")
+    }
 
     var body: some View {
         Button {
@@ -71,6 +82,68 @@ struct StationRowView: View {
             .opacity(isConnecting ? 0.6 : 1.0)
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(stationAccessibilityLabel)
+        .accessibilityHint(favoritesVM.isFavorite(stationuuid: station.stationuuid) ? "Favorite station" : "")
+        .contextMenu {
+            Button {
+                onTap?()
+            } label: {
+                Label("Play", systemImage: "play.fill")
+            }
+
+            Button {
+                Task {
+                    if favoritesVM.isFavorite(stationuuid: station.stationuuid) {
+                        await favoritesVM.removeFavorite(stationuuid: station.stationuuid)
+                    } else {
+                        await favoritesVM.addFavorite(station: station)
+                    }
+                }
+            } label: {
+                Label(
+                    favoritesVM.isFavorite(stationuuid: station.stationuuid) ? "Remove Favorite" : "Add to Favorites",
+                    systemImage: favoritesVM.isFavorite(stationuuid: station.stationuuid) ? "heart.slash" : "heart"
+                )
+            }
+
+            Button {
+                Task {
+                    _ = try? await playerVM.vote(station: station)
+                }
+            } label: {
+                Label("Vote", systemImage: "hand.thumbsup")
+            }
+
+            if let streamURL = station.streamURL {
+                Button {
+                    UIPasteboard.general.string = streamURL.absoluteString
+                } label: {
+                    Label("Copy Stream URL", systemImage: "doc.on.doc")
+                }
+
+                ShareLink(item: streamURL) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
+            }
+
+            if let homepageURL = station.homepageURL {
+                Button {
+                    openURL(homepageURL)
+                } label: {
+                    Label("Visit Website", systemImage: "globe")
+                }
+            }
+        }
+        .accessibilityAction(named: favoritesVM.isFavorite(stationuuid: station.stationuuid) ? "Remove Favorite" : "Add to Favorites") {
+            Task {
+                if favoritesVM.isFavorite(stationuuid: station.stationuuid) {
+                    await favoritesVM.removeFavorite(stationuuid: station.stationuuid)
+                } else {
+                    await favoritesVM.addFavorite(station: station)
+                }
+            }
+        }
         .swipeActions(edge: .leading) {
             Button {
                 Task {

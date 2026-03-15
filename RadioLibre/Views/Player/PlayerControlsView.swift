@@ -15,6 +15,7 @@ struct PlayerControlsView: View {
                         .font(.title2)
                 }
                 .disabled(favoritesVM.favorites.isEmpty)
+                .accessibilityLabel("Previous Station")
 
                 Button {
                     playerVM.togglePlayPause()
@@ -30,6 +31,7 @@ struct PlayerControlsView: View {
                     }
                     .frame(width: 56, height: 56)
                 }
+                .accessibilityLabel(playerVM.isPlaying ? "Pause" : "Play")
 
                 Button {
                     Task { await playerVM.playNextFavorite() }
@@ -38,6 +40,7 @@ struct PlayerControlsView: View {
                         .font(.title2)
                 }
                 .disabled(favoritesVM.favorites.isEmpty)
+                .accessibilityLabel("Next Station")
             }
             .foregroundStyle(.primary)
 
@@ -53,6 +56,7 @@ struct PlayerControlsView: View {
                     ),
                     in: 0...1
                 )
+                .accessibilityLabel("Volume")
                 Image(systemName: "speaker.wave.3.fill")
                     .font(.caption)
                     .foregroundStyle(.secondary)

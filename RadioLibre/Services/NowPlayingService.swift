@@ -6,6 +6,7 @@ final class NowPlayingService {
     static let shared = NowPlayingService()
 
     private weak var audioService: AudioPlayerService?
+    weak var playerViewModel: PlayerViewModel?
 
     init() {
         setupRemoteCommands()
@@ -13,6 +14,10 @@ final class NowPlayingService {
 
     func setAudioService(_ service: AudioPlayerService) {
         self.audioService = service
+    }
+
+    func setPlayerViewModel(_ viewModel: PlayerViewModel) {
+        self.playerViewModel = viewModel
     }
 
     // MARK: - Now Playing Info
@@ -71,9 +76,21 @@ final class NowPlayingService {
             return .success
         }
 
-        // Next/Previous track — wired in Phase 4 (favorites)
-        center.nextTrackCommand.isEnabled = false
-        center.previousTrackCommand.isEnabled = false
+        center.nextTrackCommand.isEnabled = true
+        center.nextTrackCommand.addTarget { [weak self] _ in
+            Task { @MainActor in
+                await self?.playerViewModel?.playNextFavorite()
+            }
+            return .success
+        }
+
+        center.previousTrackCommand.isEnabled = true
+        center.previousTrackCommand.addTarget { [weak self] _ in
+            Task { @MainActor in
+                await self?.playerViewModel?.playPreviousFavorite()
+            }
+            return .success
+        }
     }
 
     // MARK: - Artwork

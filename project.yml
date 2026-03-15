@@ -16,6 +16,7 @@ schemes:
     build:
       targets:
         RadioLibre: all
+        RadioLibreActivity: all
     test:
       targets:
         - RadioLibreTests
@@ -27,6 +28,8 @@ targets:
     platform: iOS
     sources:
       - RadioLibre
+    dependencies:
+      - target: RadioLibreActivity
     settings:
       base:
         INFOPLIST_FILE: RadioLibre/App/Info.plist
@@ -39,6 +42,7 @@ targets:
       path: RadioLibre/App/Info.plist
       properties:
         CFBundleDevelopmentRegion: en
+        NSSupportsLiveActivities: true
         CFBundleExecutable: $(EXECUTABLE_NAME)
         CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
         CFBundleInfoDictionaryVersion: "6.0"
@@ -63,6 +67,36 @@ targets:
           - audio
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsForMedia: true
+
+  RadioLibreActivity:
+    type: app-extension
+    platform: iOS
+    deploymentTarget:
+      iOS: "16.2"
+    sources:
+      - RadioLibreActivity
+      - path: RadioLibre/Models/RadioActivityAttributes.swift
+    settings:
+      base:
+        INFOPLIST_FILE: RadioLibreActivity/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.radiolibre.app.activity
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGNING_ALLOWED: "NO"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
+    info:
+      path: RadioLibreActivity/Info.plist
+      properties:
+        CFBundleDevelopmentRegion: en
+        CFBundleDisplayName: RadioLibre
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleInfoDictionaryVersion: "6.0"
+        CFBundleName: $(PRODUCT_NAME)
+        CFBundlePackageType: XPC!
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
   RadioLibreTests:
     type: bundle.unit-test

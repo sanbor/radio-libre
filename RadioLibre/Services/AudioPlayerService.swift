@@ -74,6 +74,7 @@ final class AudioPlayerService: ObservableObject {
     private var bufferKeepUpObservation: NSKeyValueObservation?
     private let service: RadioBrowserService
     private let nowPlayingService: NowPlayingService
+    private let liveActivityService: LiveActivityService
     private var currentBufferDuration: TimeInterval = initialBufferDuration
     private var stallCount: Int = 0
 
@@ -82,11 +83,13 @@ final class AudioPlayerService: ObservableObject {
     init(
         player: AVPlayer = AVPlayer(),
         service: RadioBrowserService = .shared,
-        nowPlayingService: NowPlayingService? = nil
+        nowPlayingService: NowPlayingService? = nil,
+        liveActivityService: LiveActivityService? = nil
     ) {
         self.player = player
         self.service = service
         self.nowPlayingService = nowPlayingService ?? NowPlayingService.shared
+        self.liveActivityService = liveActivityService ?? LiveActivityService.shared
         player.volume = volume
         setupAudioSession()
         setupInterruptionObserver()
@@ -109,6 +112,7 @@ final class AudioPlayerService: ObservableObject {
         }
 
         state = .loading(station: station)
+        liveActivityService.startOrUpdate(station: station, isPlaying: false, isLoading: true, isBuffering: false)
 
         // Cancel any existing observations for the old item
         playerItemObservation?.invalidate()
@@ -143,6 +147,7 @@ final class AudioPlayerService: ObservableObject {
         player.pause()
         state = .paused(station: station)
         nowPlayingService.updateNowPlaying(station: station, isPlaying: false)
+        liveActivityService.startOrUpdate(station: station, isPlaying: false, isLoading: false, isBuffering: false)
     }
 
     func resume() {
@@ -165,6 +170,7 @@ final class AudioPlayerService: ObservableObject {
         currentBufferDuration = Self.initialBufferDuration
         state = .idle
         nowPlayingService.clearNowPlaying()
+        liveActivityService.end()
     }
 
     func togglePlayPause() {
@@ -257,9 +263,11 @@ final class AudioPlayerService: ObservableObject {
                 switch player.timeControlStatus {
                 case .waitingToPlayAtSpecifiedRate:
                     self.state = .loading(station: station)
+                    self.liveActivityService.startOrUpdate(station: station, isPlaying: false, isLoading: true, isBuffering: self.isBuffering)
                 case .playing:
                     self.state = .playing(station: station)
                     self.nowPlayingService.updateNowPlaying(station: station, isPlaying: true)
+                    self.liveActivityService.startOrUpdate(station: station, isPlaying: true, isLoading: false, isBuffering: false)
                 case .paused:
                     // Only update if we're not already in idle or error state
                     if case .loading = self.state {
@@ -305,6 +313,7 @@ final class AudioPlayerService: ObservableObject {
                     let message = item.error?.localizedDescription ?? "Playback failed"
                     self.state = .error(station: station, message: message)
                     self.nowPlayingService.updateNowPlaying(station: station, isPlaying: false)
+                    self.liveActivityService.end()
                 case .readyToPlay:
                     break // timeControlStatus handles the transition to playing
                 case .unknown:

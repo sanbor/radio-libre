@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootTabView: View {
     @EnvironmentObject private var playerVM: PlayerViewModel
+    @EnvironmentObject private var networkMonitor: NetworkMonitorService
 
     var body: some View {
         TabView {
@@ -44,6 +45,21 @@ struct RootTabView: View {
                 .tabItem {
                     Label("Favorites", systemImage: "heart.fill")
                 }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if !networkMonitor.isConnected {
+                HStack(spacing: 6) {
+                    Image(systemName: "wifi.slash")
+                        .font(.caption)
+                    Text("No Internet Connection")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Color.red)
+            }
         }
     }
 }

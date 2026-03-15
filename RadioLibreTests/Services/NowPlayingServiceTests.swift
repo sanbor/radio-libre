@@ -104,9 +104,26 @@ final class NowPlayingServiceTests: XCTestCase {
         XCTAssertTrue(center.togglePlayPauseCommand.isEnabled)
     }
 
-    func testNextPreviousCommandsDisabled() {
+    func testNextPreviousCommandsEnabled() {
         let center = MPRemoteCommandCenter.shared()
-        XCTAssertFalse(center.nextTrackCommand.isEnabled)
-        XCTAssertFalse(center.previousTrackCommand.isEnabled)
+        XCTAssertTrue(center.nextTrackCommand.isEnabled)
+        XCTAssertTrue(center.previousTrackCommand.isEnabled)
+    }
+
+    // MARK: - Player ViewModel Wiring
+
+    func testSetPlayerViewModelStoresReference() {
+        let audioService = AudioPlayerService()
+        let playerVM = PlayerViewModel(audioService: audioService)
+        service.setPlayerViewModel(playerVM)
+        XCTAssertNotNil(service.playerViewModel)
+    }
+
+    func testPlayerViewModelIsWeak() {
+        let audioService = AudioPlayerService()
+        var playerVM: PlayerViewModel? = PlayerViewModel(audioService: audioService)
+        service.setPlayerViewModel(playerVM!)
+        playerVM = nil
+        XCTAssertNil(service.playerViewModel)
     }
 }

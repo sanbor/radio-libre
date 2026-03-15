@@ -23,6 +23,7 @@ struct FaviconImageView: View {
         .frame(width: size, height: size)
         .background(Color(.systemGray6))
         .clipShape(RoundedRectangle(cornerRadius: size * 0.2))
+        .accessibilityHidden(true)
         .task(id: url) {
             guard let url else {
                 loadedImage = nil
