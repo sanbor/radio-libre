@@ -2,7 +2,7 @@
 
 # RadioLibre
 
-Internet radio player with zero ads, zero trackers, zero dependencies, and software libre. Powered by [Radio Browser](https://www.radio-browser.info/) community database (30,000+ stations).
+Internet radio player with zero ads, trackers, telemetry, and software libre. Powered by [Radio Browser](https://www.radio-browser.info/) community database (30,000+ stations).
 iOS counterpart to [RadioDroid](https://github.com/segler-alex/RadioDroid) (Android).
 
 - iOS 16+, SwiftUI, no third-party dependencies
