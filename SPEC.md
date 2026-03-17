@@ -216,7 +216,7 @@ Automatic record of played stations, shown in the **Recent** tab.
 
 - Recorded every time a station starts playing (subject to dedup/limit rules above)
 - List sorted by most recent first
-- Each row shows station info + relative timestamp ("2 hr. ago")
+- Each row uses `StationRowView` with `subtitle` set to the relative timestamp ("2 hr. ago"), giving rows context menu, long-press, and swipe-to-favorite actions for free
 - Tapping a row plays that station
 - Toolbar button: "Clear All" (with confirmation alert)
 - Empty state: clock icon + "No listening history"
@@ -296,12 +296,13 @@ Allows HTTP (non-HTTPS) for media streams only via `NSAllowsArbitraryLoadsForMed
 The Live Activity is the sole lock screen element — `MPNowPlayingInfoCenter.nowPlayingInfo` is intentionally not set to avoid duplicate overlapping widgets. The `updateNowPlaying()` method is a no-op.
 
 **Lock screen banner** shows:
+- Station favicon (40×40 rounded rect, placeholder radio icon if unavailable)
 - Flag emoji + station name (headline)
 - Country name, codec, bitrate (secondary metadata)
 - Play/pause and stop buttons (iOS 17+ via `LiveActivityIntent`; static state icon on iOS 16.2)
 
 **Dynamic Island** shows:
-- Expanded: station name (leading), playback controls (trailing), flag + country + codec + bitrate (bottom)
+- Expanded: station favicon + name (leading), playback controls (trailing), flag + country + codec + bitrate (bottom)
 - Compact: radio icon (leading), state icon (trailing)
 - Minimal: radio icon
 
@@ -311,7 +312,9 @@ The Live Activity is the sole lock screen element — `MPNowPlayingInfoCenter.no
 - On app launch, orphaned activities from previous sessions are ended immediately
 - On app restart, existing activities are recovered from `Activity<RadioActivityAttributes>.activities` before creating new ones (prevents duplicates)
 
-**ContentState:** station name, codec, bitrate label, flag emoji, country name, isPlaying, isLoading, isBuffering.
+**ContentState:** station name, codec, bitrate label, flag emoji, country name, isPlaying, isLoading, isBuffering, faviconData (optional thumbnail bytes).
+
+**Favicon in widget:** Widget extensions cannot make network requests. `LiveActivityService` fetches the favicon via `ImageCacheService` in the main app, resizes to 80×80 JPEG (~2-4KB), and passes the bytes through `ContentState.faviconData: Data?`. On station change, favicon is fetched asynchronously and the activity is re-updated when ready.
 
 **Playback controls** (iOS 17+): `TogglePlaybackIntent` and `StopPlaybackIntent` conform to `LiveActivityIntent`. They call `RadioPlaybackAction` closures (wired to `AudioPlayerService` at launch), which run in the main app process. Shared source files in `Shared/` are compiled into both the app and widget extension targets.
 
@@ -366,7 +369,9 @@ Previous/next cycle through favorites.
 
 Reusable list row used across all station lists.
 
-Layout: favicon (44×44) | name + tags (up to 3) | codec badge + bitrate label.
+Layout: favicon (44×44) | name + subtitle + location | codec badge + bitrate label.
+
+Left side shows station name, subtitle line (tags by default, or custom text like relative timestamp), and location (flag + full country name). Right side shows codec badge and bitrate. An optional `subtitle` parameter overrides the default tags display (used by Recent tab for relative timestamps).
 
 Interactions:
 - Tap → play station

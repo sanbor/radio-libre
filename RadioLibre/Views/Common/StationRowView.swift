@@ -6,6 +6,7 @@ struct StationRowView: View {
     @Environment(\.openURL) private var openURL
 
     let station: StationDTO
+    var subtitle: String? = nil
     var isConnecting: Bool = false
     var onTap: (() -> Void)?
 
@@ -39,6 +40,11 @@ struct StationRowView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
+                    } else if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
                     } else if !station.tagList.isEmpty {
                         Text(station.tagList.prefix(3).joined(separator: ", "))
                             .font(.caption)
@@ -72,16 +78,10 @@ struct StationRowView: View {
                             .clipShape(Capsule())
                     }
 
-                    if let country = station.countryDisplayName, !country.isEmpty {
-                        HStack(spacing: 2) {
-                            if let flag = station.flagEmoji {
-                                Text(flag).font(.caption2)
-                            }
-                            Text(country)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
+                    if let bitrate = station.bitrate, bitrate > 0 {
+                        Text(station.bitrateLabel)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }

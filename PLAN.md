@@ -699,18 +699,31 @@ final class NowPlayingService {
 final class LiveActivityService {
     static let shared = LiveActivityService()
 
+    private var currentFaviconData: Data?   // 80×80 JPEG thumbnail
+    private var currentStationId: String?   // detect station changes
+    private var lastStation: StationDTO?    // for deferred re-updates
+    private var lastIsPlaying, lastIsLoading, lastIsBuffering: Bool
+
     func startOrUpdate(station: StationDTO, isPlaying: Bool, isLoading: Bool, isBuffering: Bool)
     // Creates or updates a Live Activity with RadioActivityAttributes.ContentState.
+    // On new station: clears favicon, starts async fetch via ImageCacheService,
+    // resizes to 80×80 JPEG, stores result, re-updates activity.
     // On app restart, recovers existing activities from Activity<RadioActivityAttributes>.activities
     // before creating new ones (prevents duplicates).
 
     func end()
     // Ends the current activity with .immediate dismissal policy.
-    // (.default keeps it visible for hours, causing duplicates on next play)
+    // Clears all cached state (favicon, station ID, last state).
 
     func endOrphanedActivities()
     // Ends all RadioActivityAttributes activities with .immediate dismissal.
     // Called on app launch to clean up stale activities from previous sessions.
+
+    private func fetchFavicon(for station: StationDTO)
+    // Fetches via ImageCacheService, resizes to 80×80 JPEG, re-updates if still same station.
+
+    private func performUpdate()
+    // Shared helper: builds ContentState (including faviconData) and updates/creates activity.
 }
 ```
 
@@ -966,9 +979,13 @@ Search bar for filtering the country list locally.
 ┌──────────────────────────────────────────────────┐
 │ [favicon]  Station Name                  MP3     │
 │   44x44    rock, jazz, classic          128k     │
+│            🇦🇷 Argentina                         │
 └──────────────────────────────────────────────────┘
 ```
 
+- Left side: name, subtitle (tags by default, or custom text via `subtitle` param), location (flag + full country name via `locationLabel`)
+- Right side: codec badge + bitrate label
+- Optional `subtitle: String?` parameter: when set, displays instead of tags (used by Recent tab for relative timestamps like "2 hr. ago")
 - Swipe actions: leading = toggle favorite (heart icon)
 - Context menu: Play, Add to Favorites, Vote, Copy Stream URL, Share, Visit Website
 - Tapping plays the station
@@ -1125,7 +1142,7 @@ struct RadioLibreApp: App {
 - `MPRemoteCommandCenter` handlers registered once at app start — commands still work via active audio session
 - Commands: `playCommand`, `pauseCommand`, `stopCommand`, `togglePlayPauseCommand`, `nextTrackCommand`, `previousTrackCommand`
 - Live Activity playback controls (iOS 17+): `TogglePlaybackIntent` and `StopPlaybackIntent` (`LiveActivityIntent` conformers in `Shared/`) call `RadioPlaybackAction` closures wired at launch
-- `RadioActivityAttributes.ContentState` carries: station name, codec, bitrate, flag emoji, country name, playback state flags
+- `RadioActivityAttributes.ContentState` carries: station name, codec, bitrate, flag emoji, country name, playback state flags, favicon image data (optional, 80×80 JPEG thumbnail)
 - Activities ended with `.immediate` dismissal to prevent stale banners; orphaned activities cleaned up on launch
 
 ### AirPlay
@@ -1256,7 +1273,7 @@ struct RadioLibreApp: App {
 - **`HistoryEntry.toStationDTO()`** reconstructs a minimal `StationDTO` from history data so the player can replay from history entries without an API call. Fields not stored in history (tags, votes, etc.) are nil.
 - **`Date.relativeDescription`** extension uses `RelativeDateTimeFormatter` with `.short` style (e.g. "2 hr. ago").
 - **`await` inside `XCTAssertEqual` autoclosures causes compiler errors** — must extract the async result to a local variable first, then assert on it.
-- **`RecentStationsView` uses its own `RecentStationRow`** (private struct) instead of `StationRowView` because history rows need relative timestamps instead of tags, and the data source is `HistoryEntry` not `StationDTO`.
+- **`RecentStationsView` reuses `StationRowView`** with `subtitle: entry.playedAt.relativeDescription` to show relative timestamps instead of tags. `HistoryEntry` is converted to `StationDTO` via `toStationDTO()`. This gives Recent rows context menu, long-press, and swipe-to-favorite actions for free.
 
 **Implementation notes (Discover — Favorites & Recents sections):**
 - **Duplicate `StationDTO.id` in ForEach:** `HistoryEntry` has a unique `id: UUID`, but `toStationDTO()` produces a `StationDTO` whose `id` is `stationuuid`. If the same station appears multiple times in history (played >30 min apart), the carousel's `ForEach` gets duplicate IDs, causing SwiftUI rendering bugs (missing images, skipped views). Fix: deduplicate by `stationuuid` when converting history entries to `StationDTO` in `DiscoverViewModel.loadLocalData()`. This is a general pitfall whenever converting `HistoryEntry` arrays to `[StationDTO]` for use in `ForEach` — always deduplicate first.
@@ -1350,13 +1367,15 @@ struct RadioLibreApp: App {
 6. Update `project.yml` to include `Shared/` in both app and widget extension targets
 7. Wire `RadioPlaybackAction` closures in `RadioLibreApp.swift`
 8. Update all tests: `NowPlayingServiceTests` (verify no-op), `RadioActivityAttributesTests` + `LiveActivityServiceTests` (add `countryName`), `AudioPlayerServiceTests` (test `lastPlayedStation`, resume after stop, toggle from idle)
+9. Add `faviconData: Data?` to `ContentState` — favicon fetched/resized (80×80 JPEG) by `LiveActivityService` via `ImageCacheService`, passed as bytes through activity updates. Widget decodes `Data` → `UIImage` → `Image`. Lock screen shows 40×40 rounded-rect favicon; Dynamic Island expanded leading shows 24×24 favicon. Placeholder `radio` SF Symbol when nil. `TogglePlaybackIntent` carries forward `faviconData` in optimistic state.
 
 **Implementation notes (Phase 9):**
 - **`Shared/` directory pattern:** Intent types and `RadioPlaybackAction` must be compiled in both the main app and widget extension. `LiveActivityIntent.perform()` runs in the main app process, not the widget extension, so closures are set in the app and called by the intent.
 - **iOS 16.2 fallback:** `Button(intent:)` requires iOS 17. On iOS 16.2, the widget falls back to static state icons (waveform/pause/ellipsis).
 - **CarPlay caveat:** `CPNowPlayingTemplate` reads from `nowPlayingInfo`. Since it's no longer set, CarPlay Now Playing tab shows blank metadata. Station lists and playback still work.
+- **Favicon in widget:** Widget extensions cannot make network requests. `LiveActivityService` tracks `currentStationId` and `currentFaviconData` — on station change, clears cached data, fetches via `ImageCacheService`, resizes to 80×80 JPEG, stores result, and calls `performUpdate()` to re-update the activity. State tracking fields (`lastStation`, `lastIsPlaying`, etc.) enable the deferred re-update after async fetch completes.
 
-**Verify:** `xcodegen generate` succeeds, `xcodebuild build` succeeds, all 318 tests pass. Manual: only Live Activity on lock screen, no duplicates, play resumes after stop, country name displays correctly, buttons work on iOS 17+.
+**Verify:** `xcodegen generate` succeeds, `xcodebuild build` succeeds, all 326 tests pass. Manual: only Live Activity on lock screen, no duplicates, play resumes after stop, country name displays correctly, buttons work on iOS 17+, favicon appears in lock screen and Dynamic Island.
 
 ---
 

@@ -16,7 +16,7 @@ struct RadioLiveActivityWidget: Widget {
                             .font(.headline)
                             .lineLimit(1)
                     } icon: {
-                        Image(systemName: "antenna.radiowaves.left.and.right")
+                        faviconImage(data: context.state.faviconData, size: 24)
                     }
                 }
 
@@ -61,6 +61,9 @@ struct RadioLiveActivityWidget: Widget {
     @ViewBuilder
     private func lockScreenBanner(context: ActivityViewContext<RadioActivityAttributes>) -> some View {
         HStack {
+            faviconImage(data: context.state.faviconData, size: 40)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     if let flag = context.state.flagEmoji {
@@ -122,6 +125,24 @@ struct RadioLiveActivityWidget: Widget {
         } else {
             Image(systemName: "play.fill")
                 .foregroundStyle(.cyan)
+        }
+    }
+
+    // MARK: - Favicon
+
+    @ViewBuilder
+    private func faviconImage(data: Data?, size: CGFloat) -> some View {
+        if let data, let uiImage = UIImage(data: data) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: size, height: size)
+        } else {
+            Image(systemName: "radio")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size, height: size)
+                .foregroundStyle(.secondary)
         }
     }
 

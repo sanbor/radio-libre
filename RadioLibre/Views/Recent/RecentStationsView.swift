@@ -54,26 +54,15 @@ struct RecentStationsView: View {
     private var stationList: some View {
         List {
             ForEach(viewModel.entries) { entry in
+                let station = entry.toStationDTO()
                 let isConnecting = playerVM.isLoading
                     && playerVM.currentStation?.stationuuid == entry.stationuuid
-                RecentStationRow(entry: entry, isConnecting: isConnecting) {
-                    playerVM.play(station: entry.toStationDTO())
-                }
-                .swipeActions(edge: .leading) {
-                    Button {
-                        let station = entry.toStationDTO()
-                        Task {
-                            if favoritesVM.isFavorite(stationuuid: entry.stationuuid) {
-                                await favoritesVM.removeFavorite(stationuuid: entry.stationuuid)
-                            } else {
-                                await favoritesVM.addFavorite(station: station)
-                            }
-                        }
-                    } label: {
-                        Image(systemName: favoritesVM.isFavorite(stationuuid: entry.stationuuid)
-                            ? "heart.slash.fill" : "heart.fill")
-                    }
-                    .tint(.pink)
+                StationRowView(
+                    station: station,
+                    subtitle: entry.playedAt.relativeDescription,
+                    isConnecting: isConnecting
+                ) {
+                    playerVM.play(station: station)
                 }
             }
         }
@@ -81,63 +70,3 @@ struct RecentStationsView: View {
     }
 }
 
-// MARK: - Row
-
-private struct RecentStationRow: View {
-    let entry: HistoryEntry
-    var isConnecting: Bool = false
-    var onTap: (() -> Void)?
-
-    var body: some View {
-        Button {
-            onTap?()
-        } label: {
-            HStack(spacing: 12) {
-                FaviconImageView(url: entry.faviconURL.flatMap { URL(string: $0) }, size: 44)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.name)
-                        .font(.body)
-                        .lineLimit(1)
-                        .foregroundStyle(.primary)
-
-                    if isConnecting {
-                        HStack(spacing: 4) {
-                            ProgressView()
-                                .controlSize(.mini)
-                            Text("Connecting...")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } else {
-                        Text(entry.playedAt.relativeDescription)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 2) {
-                    if let codec = entry.codec, !codec.isEmpty {
-                        Text(codec)
-                            .font(.caption2)
-                            .fontWeight(.medium)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(.systemGray5))
-                            .clipShape(Capsule())
-                    }
-
-                    Text(entry.bitrateLabel)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .contentShape(Rectangle())
-            .padding(.vertical, 4)
-            .opacity(isConnecting ? 0.6 : 1.0)
-        }
-        .buttonStyle(.plain)
-    }
-}

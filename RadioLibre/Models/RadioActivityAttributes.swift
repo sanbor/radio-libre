@@ -13,5 +13,6 @@ struct RadioActivityAttributes: ActivityAttributes {
         let isPlaying: Bool
         let isLoading: Bool
         let isBuffering: Bool
+        let faviconData: Data?
     }
 }

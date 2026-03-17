@@ -199,7 +199,7 @@ final class StationDTOTests: XCTestCase {
 
     func testLocationLabelCountry() {
         let station = StationDTOTests.makeStation(countrycode: "AR")
-        XCTAssertEqual(station.locationLabel, "AR")
+        XCTAssertEqual(station.locationLabel, "Argentina")
     }
 
     func testLocationLabelNilWhenNil() {

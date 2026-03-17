@@ -17,7 +17,8 @@ struct TogglePlaybackIntent: LiveActivityIntent {
                 countryName: current.countryName,
                 isPlaying: !current.isPlaying,
                 isLoading: false,
-                isBuffering: false
+                isBuffering: false,
+                faviconData: current.faviconData
             )
             await activity.update(
                 ActivityContent(state: toggled, staleDate: Date().addingTimeInterval(15 * 60))
