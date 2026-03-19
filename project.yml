@@ -1,6 +1,6 @@
-name: RadioLibre
+name: LibreRadio
 options:
-  bundleIdPrefix: com.radiolibre
+  bundleIdPrefix: org.libreradio
   deploymentTarget:
     iOS: "16.0"
   xcodeVersion: "15.0"
@@ -12,35 +12,35 @@ settings:
     CODE_SIGNING_ALLOWED: "NO"
 
 schemes:
-  RadioLibre:
+  LibreRadio:
     build:
       targets:
-        RadioLibre: all
-        RadioLibreActivity: all
+        LibreRadio: all
+        LibreRadioActivity: all
     test:
       targets:
-        - RadioLibreTests
+        - LibreRadioTests
       gatherCoverageData: true
 
 targets:
-  RadioLibre:
+  LibreRadio:
     type: application
     platform: iOS
     sources:
-      - RadioLibre
+      - LibreRadio
       - Shared
     dependencies:
-      - target: RadioLibreActivity
+      - target: LibreRadioActivity
     settings:
       base:
-        INFOPLIST_FILE: RadioLibre/App/Info.plist
-        PRODUCT_BUNDLE_IDENTIFIER: com.radiolibre.app
+        INFOPLIST_FILE: LibreRadio/App/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: org.libreradio.app
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: false
     info:
-      path: RadioLibre/App/Info.plist
+      path: LibreRadio/App/Info.plist
       properties:
         CFBundleDevelopmentRegion: en
         NSSupportsLiveActivities: true
@@ -73,27 +73,27 @@ targets:
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsForMedia: true
 
-  RadioLibreActivity:
+  LibreRadioActivity:
     type: app-extension
     platform: iOS
     deploymentTarget:
       iOS: "16.2"
     sources:
-      - RadioLibreActivity
-      - path: RadioLibre/Models/RadioActivityAttributes.swift
+      - LibreRadioActivity
+      - path: LibreRadio/Models/RadioActivityAttributes.swift
       - Shared
     settings:
       base:
-        INFOPLIST_FILE: RadioLibreActivity/Info.plist
-        PRODUCT_BUNDLE_IDENTIFIER: com.radiolibre.app.activity
+        INFOPLIST_FILE: LibreRadioActivity/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: org.libreradio.app.activity
         GENERATE_INFOPLIST_FILE: false
         CODE_SIGNING_ALLOWED: "NO"
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
     info:
-      path: RadioLibreActivity/Info.plist
+      path: LibreRadioActivity/Info.plist
       properties:
         CFBundleDevelopmentRegion: en
-        CFBundleDisplayName: RadioLibre
+        CFBundleDisplayName: LibreRadio
         CFBundleExecutable: $(EXECUTABLE_NAME)
         CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
         CFBundleInfoDictionaryVersion: "6.0"
@@ -104,16 +104,16 @@ targets:
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
-  RadioLibreTests:
+  LibreRadioTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - RadioLibreTests
+      - LibreRadioTests
     dependencies:
-      - target: RadioLibre
+      - target: LibreRadio
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.radiolibre.tests
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/RadioLibre.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RadioLibre
+        PRODUCT_BUNDLE_IDENTIFIER: org.libreradio.tests
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/LibreRadio.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/LibreRadio
         BUNDLE_LOADER: $(TEST_HOST)
         GENERATE_INFOPLIST_FILE: true

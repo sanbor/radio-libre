@@ -81,7 +81,7 @@ Best practice: randomize server list, pick first, rotate on failure. Cache in Us
 ### General Rules
 
 - **No authentication** required. No API keys.
-- **User-Agent** header is mandatory: `RadioLibre/1.0 (iOS; Swift)`
+- **User-Agent** header is mandatory: `LibreRadio/1.0 (iOS; Swift)`
 - **HTTPS** preferred. All endpoints accept both GET and POST.
 - **Default limit is 100,000** — always set `limit` explicitly.
 - **Boolean fields** may be actual booleans or 0/1 integers depending on the field.
@@ -262,15 +262,15 @@ One vote per IP per station per 10 minutes. Returns:
 ## Project Structure
 
 ```
-RadioLibre/
-├── RadioLibre.xcodeproj/
-├── Shared/                                      # Compiled into both RadioLibre and RadioLibreActivity targets
+LibreRadio/
+├── LibreRadio.xcodeproj/
+├── Shared/                                      # Compiled into both LibreRadio and LibreRadioActivity targets
 │   ├── RadioPlaybackAction.swift                # Closure-based dispatch for cross-target playback control
 │   ├── TogglePlaybackIntent.swift               # LiveActivityIntent: toggle play/pause (iOS 17+)
 │   └── StopPlaybackIntent.swift                 # LiveActivityIntent: stop playback (iOS 17+)
-├── RadioLibre/
+├── LibreRadio/
 │   ├── App/
-│   │   ├── RadioLibreApp.swift                 # @main, SwiftData container, environment setup, RadioPlaybackAction wiring
+│   │   ├── LibreRadioApp.swift                 # @main, SwiftData container, environment setup, RadioPlaybackAction wiring
 │   │   └── Info.plist                          # Background modes, ATS exceptions, CarPlay scene
 │   │
 │   ├── CarPlay/
@@ -359,11 +359,11 @@ RadioLibre/
 │       │   └── Colors/
 │       └── Localizable.xcstrings                # All user-facing strings
 │
-├── RadioLibreActivity/                          # Widget extension (iOS 16.2+)
+├── LibreRadioActivity/                          # Widget extension (iOS 16.2+)
 │   ├── Info.plist
 │   └── RadioLiveActivityWidget.swift            # Lock screen banner + Dynamic Island + playback controls
 │
-└── RadioLibreTests/
+└── LibreRadioTests/
     ├── Services/
     │   ├── RadioBrowserServiceTests.swift
     │   ├── ServerDiscoveryServiceTests.swift
@@ -520,7 +520,7 @@ actor ServerDiscoveryService {
 actor RadioBrowserService {
     static let shared = RadioBrowserService()
 
-    private let session: URLSession  // custom User-Agent: "RadioLibre/1.0 (iOS; Swift)"
+    private let session: URLSession  // custom User-Agent: "LibreRadio/1.0 (iOS; Swift)"
     private let decoder: JSONDecoder // with snake_case key decoding strategy
     private let discovery: ServerDiscoveryService
 
@@ -1081,11 +1081,11 @@ struct FaviconImageView: View {
 
 ### App Entry Point
 
-#### `RadioLibreApp.swift`
+#### `LibreRadioApp.swift`
 
 ```swift
 @main
-struct RadioLibreApp: App {
+struct LibreRadioApp: App {
     @StateObject private var playerVM = PlayerViewModel(audioService: .shared)
     @StateObject private var favoritesVM = FavoritesViewModel()
 
@@ -1182,7 +1182,7 @@ struct RadioLibreApp: App {
 ### Phase 1: Foundation
 **Goal:** App builds, discovers servers, fetches and displays stations.
 
-1. Create Xcode project (RadioLibre, iOS 16+, SwiftUI, SwiftData)
+1. Create Xcode project (LibreRadio, iOS 16+, SwiftUI, SwiftData)
 2. Configure `Info.plist`: `UIBackgroundModes: audio`, `NSAllowsArbitraryLoadsForMedia`
 3. `AppError.swift`
 4. `StationDTO.swift` with CodingKeys and computed properties
@@ -1194,7 +1194,7 @@ struct RadioLibreApp: App {
 10. `StationRowView.swift` (basic, no swipe actions yet)
 11. `DiscoverView.swift` (vertical lists, no carousel yet)
 12. `RootTabView.swift` with Discover tab only
-13. `RadioLibreApp.swift` with server discovery on launch
+13. `LibreRadioApp.swift` with server discovery on launch
 
 **Verify:** App launches, resolves API server, fetches top stations, displays them in a list.
 
@@ -1247,7 +1247,7 @@ struct RadioLibreApp: App {
 - **BrowseViewModel per category view:** Each category view (`CountryListView`, `LanguageListView`, `TagListView`) creates its own `@StateObject` BrowseViewModel. This is intentional — each view only calls its own load method, and the views are separate NavigationLink destinations that load lazily.
 - **StationListView init with `@StateObject`:** The `StationListView` receives a `Filter` enum and creates its `StationListViewModel` via `StateObject(wrappedValue:)` in the init. The `title` parameter in `init` is unused directly since the VM derives its own title — the `StationListView` uses `viewModel.title` for the navigation title.
 - **Offset rollback on loadMore error:** When `loadMore()` fails, the offset is decremented back so the user can retry loading the same page. Without this, the offset would advance past data that was never loaded.
-- **Test scheme name:** The Xcode project has a single scheme `RadioLibre` (not `RadioLibreTests`). Tests must be run via `xcodebuild -scheme RadioLibre test`, not `-scheme RadioLibreTests`.
+- **Test scheme name:** The Xcode project has a single scheme `LibreRadio` (not `LibreRadioTests`). Tests must be run via `xcodebuild -scheme LibreRadio test`, not `-scheme LibreRadioTests`.
 - **Favorites tab placeholder:** Added as a simple NavigationStack with "No favorites yet" text and heart icon, ready for Phase 4 to replace with real FavoritesView.
 
 ### Phase 4: Persistence
@@ -1255,7 +1255,7 @@ struct RadioLibreApp: App {
 
 1. `FavoriteStation.swift` SwiftData model
 2. ~~`HistoryEntry.swift` SwiftData model~~ → **Done (pre-Phase 4):** implemented as `Codable` struct with `UserDefaults` persistence via `HistoryService` actor. Can migrate to SwiftData later if needed.
-3. Configure `modelContainer` in RadioLibreApp (for FavoriteStation only)
+3. Configure `modelContainer` in LibreRadioApp (for FavoriteStation only)
 4. `FavoritesViewModel.swift` (add/remove/reorder/sync)
 5. `FavoritesView.swift` with `@Query`, drag-to-reorder, swipe-to-delete
 6. ~~`HistoryViewModel.swift`~~ → **Done (pre-Phase 4):** `RecentStationsViewModel.swift`
@@ -1280,8 +1280,8 @@ struct RadioLibreApp: App {
 - **Favorites and recents load from local storage** (no network needed), so they appear immediately before API data arrives. This gives the Discover screen instant content even on slow connections.
 
 **Implementation notes (Build Fix):**
-- **Missing shared scheme:** XcodeGen was not generating a shared `.xcscheme` file because `project.yml` had no `schemes:` section. Without a shared scheme, `xcodebuild -scheme RadioLibre` fails with "Supported platforms for the buildables in the current scheme is empty." Fix: add an explicit `schemes:` block to `project.yml` with build targets and test targets.
-- **Code signing failure on simulator:** Building for simulator failed with "Signing for RadioLibre requires a development team." Fix: add `CODE_SIGNING_ALLOWED: "NO"` to the base project settings in `project.yml`. This is appropriate for CI and simulator-only builds.
+- **Missing shared scheme:** XcodeGen was not generating a shared `.xcscheme` file because `project.yml` had no `schemes:` section. Without a shared scheme, `xcodebuild -scheme LibreRadio` fails with "Supported platforms for the buildables in the current scheme is empty." Fix: add an explicit `schemes:` block to `project.yml` with build targets and test targets.
+- **Code signing failure on simulator:** Building for simulator failed with "Signing for LibreRadio requires a development team." Fix: add `CODE_SIGNING_ALLOWED: "NO"` to the base project settings in `project.yml`. This is appropriate for CI and simulator-only builds.
 - **`CFBundlePackageType` warning:** Using `$(PRODUCT_TYPE)` expands to `com.apple.product-type.application` which is not a valid four-character string. Fix: hardcode `APPL` instead.
 
 ### Phase 5: Player UI & Image Cache
@@ -1340,7 +1340,7 @@ struct RadioLibreApp: App {
 
 1. `CarPlaySceneDelegate.swift` — `CPTemplateApplicationSceneDelegate` with tab bar (Favorites, Recent, Popular, Now Playing)
 2. Add `PlayerViewModel.shared` singleton for cross-scene access
-3. Update `RadioLibreApp.swift` to use `PlayerViewModel.shared`
+3. Update `LibreRadioApp.swift` to use `PlayerViewModel.shared`
 4. Add `CPTemplateApplicationSceneSessionRoleApplication` to `project.yml` and `Info.plist`
 5. `CarPlaySceneDelegateTests.swift` — detail text formatting and station mapping tests
 
@@ -1365,7 +1365,7 @@ struct RadioLibreApp: App {
 4. Add `countryName` to `RadioActivityAttributes.ContentState`, display in lock screen banner and Dynamic Island
 5. Add `LiveActivityIntent` playback controls (iOS 17+): `TogglePlaybackIntent`, `StopPlaybackIntent` in `Shared/` directory, `RadioPlaybackAction` closure-based dispatch, `Button(intent:)` in widget
 6. Update `project.yml` to include `Shared/` in both app and widget extension targets
-7. Wire `RadioPlaybackAction` closures in `RadioLibreApp.swift`
+7. Wire `RadioPlaybackAction` closures in `LibreRadioApp.swift`
 8. Update all tests: `NowPlayingServiceTests` (verify no-op), `RadioActivityAttributesTests` + `LiveActivityServiceTests` (add `countryName`), `AudioPlayerServiceTests` (test `lastPlayedStation`, resume after stop, toggle from idle)
 9. Add `faviconData: Data?` to `ContentState` — favicon fetched/resized (80×80 JPEG) by `LiveActivityService` via `ImageCacheService`, passed as bytes through activity updates. Widget decodes `Data` → `UIImage` → `Image`. Lock screen shows 40×40 rounded-rect favicon; Dynamic Island expanded leading shows 24×24 favicon. Placeholder `radio` SF Symbol when nil. `TogglePlaybackIntent` carries forward `faviconData` in optimistic state.
 

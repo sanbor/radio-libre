@@ -1,6 +1,6 @@
-<img src="RadioLibre/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="200" />
+<img src="LibreRadio/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="200" />
 
-# RadioLibre
+# LibreRadio
 
 Internet radio player with zero ads, trackers, telemetry, and software libre. Powered by [Radio Browser](https://www.radio-browser.info/) community database (30,000+ stations).
 iOS counterpart to [RadioDroid](https://github.com/segler-alex/RadioDroid) (Android).
@@ -34,7 +34,7 @@ xcodegen generate
 ### Build
 
 ```bash
-xcodebuild -project RadioLibre.xcodeproj -scheme RadioLibre \
+xcodebuild -project LibreRadio.xcodeproj -scheme LibreRadio \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   -quiet build
 ```
@@ -42,7 +42,7 @@ xcodebuild -project RadioLibre.xcodeproj -scheme RadioLibre \
 ### Run Tests
 
 ```bash
-xcodebuild -project RadioLibre.xcodeproj -scheme RadioLibre \
+xcodebuild -project LibreRadio.xcodeproj -scheme LibreRadio \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   -enableCodeCoverage YES test
 ```
@@ -50,7 +50,7 @@ xcodebuild -project RadioLibre.xcodeproj -scheme RadioLibre \
 To see just the summary (pass/fail counts and errors):
 
 ```bash
-xcodebuild -project RadioLibre.xcodeproj -scheme RadioLibre \
+xcodebuild -project LibreRadio.xcodeproj -scheme LibreRadio \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   -enableCodeCoverage YES test 2>&1 \
   | grep -E '(error:.*\.swift|Executed|TEST SUCCEEDED|TEST FAILED)'
@@ -59,13 +59,13 @@ xcodebuild -project RadioLibre.xcodeproj -scheme RadioLibre \
 ### Clean
 
 ```bash
-xcodebuild -project RadioLibre.xcodeproj -scheme RadioLibre clean
+xcodebuild -project LibreRadio.xcodeproj -scheme LibreRadio clean
 ```
 
 ### Open in Xcode
 
 ```bash
-open RadioLibre.xcodeproj
+open LibreRadio.xcodeproj
 ```
 
 ### CI

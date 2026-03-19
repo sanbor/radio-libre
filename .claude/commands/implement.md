@@ -3,7 +3,7 @@ description: Implement a feature from spec with tests and coverage verification
 argument-hint: <feature-or-area>
 ---
 
-You are implementing a feature for the RadioLibre iOS app. The user has requested: **$ARGUMENTS**
+You are implementing a feature for the LibreRadio iOS app. The user has requested: **$ARGUMENTS**
 
 Follow these 9 steps in order. Do not skip steps.
 
@@ -15,7 +15,7 @@ Read the project spec and plan to understand requirements and architecture:
 
 1. Read `SPEC.md` — this is the **behavioral truth**. Every UI behavior, API call, and edge case defined here must be matched exactly.
 2. Read `PLAN.md` — this is the **architectural guide**. It defines the file structure, patterns, and phased delivery.
-3. Scan existing source files in `RadioLibre/` and `RadioLibreTests/` to understand what is already built and what conventions are in use.
+3. Scan existing source files in `LibreRadio/` and `LibreRadioTests/` to understand what is already built and what conventions are in use.
 4. Create a task to track your progress through these steps.
 
 Identify which parts of SPEC.md and PLAN.md relate to **$ARGUMENTS**.
@@ -27,11 +27,11 @@ Identify which parts of SPEC.md and PLAN.md relate to **$ARGUMENTS**.
 Determine exactly what needs to be built:
 
 1. List every file to create or modify, organized by layer:
-   - **Models** (`RadioLibre/Models/`) — `Codable, Identifiable, Hashable` structs
-   - **Services** (`RadioLibre/Services/`) — `actor` types (except audio service which is `@MainActor`)
-   - **ViewModels** (`RadioLibre/ViewModels/`) — `@MainActor final class` conforming to `ObservableObject`
-   - **Views** (`RadioLibre/Views/`) — SwiftUI views
-   - **Tests** (`RadioLibreTests/`) — mirroring the source structure
+   - **Models** (`LibreRadio/Models/`) — `Codable, Identifiable, Hashable` structs
+   - **Services** (`LibreRadio/Services/`) — `actor` types (except audio service which is `@MainActor`)
+   - **ViewModels** (`LibreRadio/ViewModels/`) — `@MainActor final class` conforming to `ObservableObject`
+   - **Views** (`LibreRadio/Views/`) — SwiftUI views
+   - **Tests** (`LibreRadioTests/`) — mirroring the source structure
 2. Identify dependencies on features that are not yet built. If a dependency is missing and small, build it. If large, note it and implement what you can.
 3. Update your task with the plan.
 
@@ -53,7 +53,7 @@ Write the code following these project conventions:
 ```bash
 xcodegen generate
 ```
-This regenerates `RadioLibre.xcodeproj` from `project.yml`. Forgetting this is the #1 cause of build failures.
+This regenerates `LibreRadio.xcodeproj` from `project.yml`. Forgetting this is the #1 cause of build failures.
 
 ---
 
@@ -61,8 +61,8 @@ This regenerates `RadioLibre.xcodeproj` from `project.yml`. Forgetting this is t
 
 Write thorough tests following established patterns in the project:
 
-- Use `MockURLProtocol` for network mocking (defined in `RadioLibreTests/Helpers/MockURLProtocol.swift`)
-- Use `TestFixtures` for test data (defined in `RadioLibreTests/Helpers/TestHelpers.swift`)
+- Use `MockURLProtocol` for network mocking (defined in `LibreRadioTests/Helpers/MockURLProtocol.swift`)
+- Use `TestFixtures` for test data (defined in `LibreRadioTests/Helpers/TestHelpers.swift`)
 - Use `TestFixtures.makeMockSession()` to create a mock `URLSession`
 - Add `@MainActor` on test classes that test `@MainActor` view models
 - Test all logic branches: success paths, error paths, edge cases, empty states
@@ -78,10 +78,10 @@ Run the build first, then tests with coverage:
 
 ```bash
 # Build
-xcodebuild -project RadioLibre.xcodeproj -scheme RadioLibre -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -quiet build 2>&1
+xcodebuild -project LibreRadio.xcodeproj -scheme LibreRadio -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -quiet build 2>&1
 
 # Test with coverage
-xcodebuild -project RadioLibre.xcodeproj -scheme RadioLibreTests -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -enableCodeCoverage YES test 2>&1 | grep -E '(error:.*\.swift|Executed|TEST SUCCEEDED|TEST FAILED)'
+xcodebuild -project LibreRadio.xcodeproj -scheme LibreRadioTests -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -enableCodeCoverage YES test 2>&1 | grep -E '(error:.*\.swift|Executed|TEST SUCCEEDED|TEST FAILED)'
 ```
 
 ---

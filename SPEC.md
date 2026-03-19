@@ -1,4 +1,4 @@
-# RadioLibre
+# LibreRadio
 
 Native iOS internet radio player powered by the [Radio Browser](https://www.radio-browser.info/) community database (30,000+ stations). iOS counterpart to [RadioDroid](https://github.com/segler-alex/RadioDroid) (Android).
 
