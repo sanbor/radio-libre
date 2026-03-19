@@ -16,13 +16,96 @@ final class NowPlayingServiceTests: XCTestCase {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
-    // MARK: - updateNowPlaying (disabled — Live Activity is the sole lock screen element)
+    // MARK: - updateNowPlaying
 
-    func testUpdateNowPlayingDoesNotSetInfo() {
+    func testUpdateNowPlayingSetsInfo() {
         let station = StationDTOTests.makeStation(name: "Jazz FM")
         service.updateNowPlaying(station: station, isPlaying: true)
 
-        XCTAssertNil(MPNowPlayingInfoCenter.default().nowPlayingInfo)
+        let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        XCTAssertNotNil(info)
+        XCTAssertEqual(info?[MPMediaItemPropertyTitle] as? String, "Jazz FM")
+        XCTAssertEqual(info?[MPNowPlayingInfoPropertyIsLiveStream] as? Bool, true)
+    }
+
+    func testUpdateNowPlayingSetsPlaybackRate() {
+        let station = StationDTOTests.makeStation(name: "Jazz FM")
+
+        service.updateNowPlaying(station: station, isPlaying: true)
+        var info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        XCTAssertEqual(info?[MPNowPlayingInfoPropertyPlaybackRate] as? Double, 1.0)
+
+        service.updateNowPlaying(station: station, isPlaying: false)
+        info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        XCTAssertEqual(info?[MPNowPlayingInfoPropertyPlaybackRate] as? Double, 0.0)
+    }
+
+    func testUpdateNowPlayingMetadataFormat() {
+        let station = StationDTOTests.makeStation(
+            name: "Test Radio",
+            countrycode: "NL",
+            codec: "AAC+",
+            bitrate: 95
+        )
+        service.updateNowPlaying(station: station, isPlaying: true)
+
+        let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        let artist = info?[MPMediaItemPropertyArtist] as? String
+        XCTAssertNotNil(artist)
+        // Should contain flag, country, codec, and bitrate
+        XCTAssertTrue(artist?.contains("Netherlands") == true)
+        XCTAssertTrue(artist?.contains("AAC+") == true)
+        XCTAssertTrue(artist?.contains("95k") == true)
+    }
+
+    func testUpdateNowPlayingMetadataFormatNoCountry() {
+        let station = StationDTOTests.makeStation(
+            name: "Test Radio",
+            codec: "MP3",
+            bitrate: 128
+        )
+        service.updateNowPlaying(station: station, isPlaying: true)
+
+        let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        let artist = info?[MPMediaItemPropertyArtist] as? String
+        XCTAssertNotNil(artist)
+        XCTAssertTrue(artist?.contains("MP3") == true)
+        XCTAssertTrue(artist?.contains("128k") == true)
+    }
+
+    // MARK: - updateStreamMetadata
+
+    func testUpdateStreamMetadata() {
+        let station = StationDTOTests.makeStation(name: "Jazz FM")
+        service.updateNowPlaying(station: station, isPlaying: true)
+
+        service.updateStreamMetadata(title: "Maybe Angels", artist: "Sheryl Crow", station: station)
+
+        let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        XCTAssertEqual(info?[MPMediaItemPropertyTitle] as? String, "Maybe Angels")
+        XCTAssertEqual(info?[MPMediaItemPropertyArtist] as? String, "Sheryl Crow")
+    }
+
+    func testUpdateStreamMetadataIgnoresStaleStation() {
+        let station1 = StationDTOTests.makeStation(uuid: "station-1", name: "Station 1")
+        let station2 = StationDTOTests.makeStation(uuid: "station-2", name: "Station 2")
+
+        service.updateNowPlaying(station: station2, isPlaying: true)
+        service.updateStreamMetadata(title: "Old Track", artist: "Old Artist", station: station1)
+
+        let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        // Should not have updated because station1 is stale
+        XCTAssertEqual(info?[MPMediaItemPropertyTitle] as? String, "Station 2")
+    }
+
+    func testUpdateStreamMetadataFallsBackToStationName() {
+        let station = StationDTOTests.makeStation(name: "Jazz FM")
+        service.updateNowPlaying(station: station, isPlaying: true)
+
+        service.updateStreamMetadata(title: nil, artist: nil, station: station)
+
+        let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        XCTAssertEqual(info?[MPMediaItemPropertyTitle] as? String, "Jazz FM")
     }
 
     // MARK: - clearNowPlaying
@@ -50,6 +133,11 @@ final class NowPlayingServiceTests: XCTestCase {
         let center = MPRemoteCommandCenter.shared()
         XCTAssertTrue(center.nextTrackCommand.isEnabled)
         XCTAssertTrue(center.previousTrackCommand.isEnabled)
+    }
+
+    func testLikeCommandEnabled() {
+        let center = MPRemoteCommandCenter.shared()
+        XCTAssertTrue(center.likeCommand.isEnabled)
     }
 
     // MARK: - Player ViewModel Wiring

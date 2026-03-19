@@ -8,6 +8,8 @@ final class AudioPlayerService: ObservableObject {
     // MARK: - Published State
 
     @Published private(set) var state: PlaybackState = .idle
+    @Published private(set) var currentTrackTitle: String?
+    @Published private(set) var currentArtist: String?
     @Published var volume: Float = 1.0 {
         didSet { player.volume = volume }
     }
@@ -74,9 +76,9 @@ final class AudioPlayerService: ObservableObject {
     private var timeControlObservation: NSKeyValueObservation?
     private var bufferEmptyObservation: NSKeyValueObservation?
     private var bufferKeepUpObservation: NSKeyValueObservation?
+    private var metadataObservation: NSKeyValueObservation?
     private let service: RadioBrowserService
     private let nowPlayingService: NowPlayingService
-    private let liveActivityService: LiveActivityService
     private var currentBufferDuration: TimeInterval = initialBufferDuration
     private var stallCount: Int = 0
 
@@ -85,13 +87,11 @@ final class AudioPlayerService: ObservableObject {
     init(
         player: AVPlayer = AVPlayer(),
         service: RadioBrowserService = .shared,
-        nowPlayingService: NowPlayingService? = nil,
-        liveActivityService: LiveActivityService? = nil
+        nowPlayingService: NowPlayingService? = nil
     ) {
         self.player = player
         self.service = service
         self.nowPlayingService = nowPlayingService ?? NowPlayingService.shared
-        self.liveActivityService = liveActivityService ?? LiveActivityService.shared
         player.volume = volume
         setupAudioSession()
         setupInterruptionObserver()
@@ -115,8 +115,11 @@ final class AudioPlayerService: ObservableObject {
             stallCount = 0
         }
 
+        // Clear ICY metadata on station change
+        currentTrackTitle = nil
+        currentArtist = nil
+
         state = .loading(station: station)
-        liveActivityService.startOrUpdate(station: station, isPlaying: false, isLoading: true, isBuffering: false)
 
         // Cancel any existing observations for the old item
         playerItemObservation?.invalidate()
@@ -125,6 +128,8 @@ final class AudioPlayerService: ObservableObject {
         bufferEmptyObservation = nil
         bufferKeepUpObservation?.invalidate()
         bufferKeepUpObservation = nil
+        metadataObservation?.invalidate()
+        metadataObservation = nil
 
         let asset = AVURLAsset(url: streamURL)
         let item = AVPlayerItem(asset: asset)
@@ -134,6 +139,7 @@ final class AudioPlayerService: ObservableObject {
 
         observePlayerItemStatus(item: item, station: station)
         observeBufferState(item: item, station: station)
+        observeTimedMetadata(item: item)
 
         player.replaceCurrentItem(with: item)
         player.play()
@@ -151,7 +157,6 @@ final class AudioPlayerService: ObservableObject {
         player.pause()
         state = .paused(station: station)
         nowPlayingService.updateNowPlaying(station: station, isPlaying: false)
-        liveActivityService.startOrUpdate(station: station, isPlaying: false, isLoading: false, isBuffering: false)
     }
 
     func resume() {
@@ -169,12 +174,15 @@ final class AudioPlayerService: ObservableObject {
         bufferEmptyObservation = nil
         bufferKeepUpObservation?.invalidate()
         bufferKeepUpObservation = nil
+        metadataObservation?.invalidate()
+        metadataObservation = nil
         isBuffering = false
         stallCount = 0
         currentBufferDuration = Self.initialBufferDuration
+        currentTrackTitle = nil
+        currentArtist = nil
         state = .idle
         nowPlayingService.clearNowPlaying()
-        liveActivityService.end()
     }
 
     func togglePlayPause() {
@@ -271,11 +279,9 @@ final class AudioPlayerService: ObservableObject {
                 switch player.timeControlStatus {
                 case .waitingToPlayAtSpecifiedRate:
                     self.state = .loading(station: station)
-                    self.liveActivityService.startOrUpdate(station: station, isPlaying: false, isLoading: true, isBuffering: self.isBuffering)
                 case .playing:
                     self.state = .playing(station: station)
                     self.nowPlayingService.updateNowPlaying(station: station, isPlaying: true)
-                    self.liveActivityService.startOrUpdate(station: station, isPlaying: true, isLoading: false, isBuffering: false)
                 case .paused:
                     // Only update if we're not already in idle or error state
                     if case .loading = self.state {
@@ -312,6 +318,38 @@ final class AudioPlayerService: ObservableObject {
         }
     }
 
+    private func observeTimedMetadata(item: AVPlayerItem) {
+        metadataObservation = item.observe(\.timedMetadata, options: [.new]) { [weak self] item, _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                guard let metadataItems = item.timedMetadata else { return }
+
+                for metadata in metadataItems {
+                    if metadata.commonKey == AVMetadataKey.commonKeyTitle, let value = metadata.stringValue, !value.isEmpty {
+                        self.parseStreamTitle(value)
+                        return
+                    }
+                }
+            }
+        }
+    }
+
+    func parseStreamTitle(_ rawTitle: String) {
+        if let separatorRange = rawTitle.range(of: " - ") {
+            let artist = String(rawTitle[rawTitle.startIndex..<separatorRange.lowerBound])
+            let title = String(rawTitle[separatorRange.upperBound...])
+            currentArtist = artist.isEmpty ? nil : artist
+            currentTrackTitle = title.isEmpty ? nil : title
+        } else {
+            currentArtist = nil
+            currentTrackTitle = rawTitle
+        }
+
+        if let station = currentStation {
+            nowPlayingService.updateStreamMetadata(title: currentTrackTitle, artist: currentArtist, station: station)
+        }
+    }
+
     private func observePlayerItemStatus(item: AVPlayerItem, station: StationDTO) {
         playerItemObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
             Task { @MainActor [weak self] in
@@ -321,7 +359,6 @@ final class AudioPlayerService: ObservableObject {
                     let message = item.error?.localizedDescription ?? "Playback failed"
                     self.state = .error(station: station, message: message)
                     self.nowPlayingService.updateNowPlaying(station: station, isPlaying: false)
-                    self.liveActivityService.end()
                 case .readyToPlay:
                     break // timeControlStatus handles the transition to playing
                 case .unknown:

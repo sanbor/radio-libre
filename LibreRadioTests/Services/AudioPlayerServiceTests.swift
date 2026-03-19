@@ -51,6 +51,11 @@ final class AudioPlayerServiceTests: XCTestCase {
         XCTAssertEqual(service.volume, 1.0)
     }
 
+    func testInitialMetadataIsNil() {
+        XCTAssertNil(service.currentTrackTitle)
+        XCTAssertNil(service.currentArtist)
+    }
+
     // MARK: - Play
 
     func testPlayWithValidURLSetsLoadingState() {
@@ -91,6 +96,15 @@ final class AudioPlayerServiceTests: XCTestCase {
         XCTAssertEqual(service.currentStation?.stationuuid, "station-2")
     }
 
+    func testPlayClearsMetadata() {
+        let station = TestFixtures.makeStation()
+        service.play(station: station)
+
+        // Metadata should be nil after starting a new station
+        XCTAssertNil(service.currentTrackTitle)
+        XCTAssertNil(service.currentArtist)
+    }
+
     // MARK: - Pause
 
     func testPauseFromLoadingSetsCorrectState() {
@@ -119,6 +133,15 @@ final class AudioPlayerServiceTests: XCTestCase {
         XCTAssertNil(service.currentStation)
         XCTAssertFalse(service.isPlaying)
         XCTAssertFalse(service.isLoading)
+    }
+
+    func testStopClearsMetadata() {
+        let station = TestFixtures.makeStation()
+        service.play(station: station)
+        service.stop()
+
+        XCTAssertNil(service.currentTrackTitle)
+        XCTAssertNil(service.currentArtist)
     }
 
     func testStopWhenIdleDoesNothing() {
@@ -406,5 +429,48 @@ final class AudioPlayerServiceTests: XCTestCase {
         )
 
         XCTAssertEqual(service.state, .loading(station: station))
+    }
+
+    // MARK: - ICY Metadata Parsing
+
+    func testMetadataParsingArtistTitle() {
+        let station = TestFixtures.makeStation()
+        service.play(station: station)
+
+        service.parseStreamTitle("Sheryl Crow - Maybe Angels")
+        XCTAssertEqual(service.currentArtist, "Sheryl Crow")
+        XCTAssertEqual(service.currentTrackTitle, "Maybe Angels")
+    }
+
+    func testMetadataParsingTitleOnly() {
+        let station = TestFixtures.makeStation()
+        service.play(station: station)
+
+        service.parseStreamTitle("Station Jingle")
+        XCTAssertNil(service.currentArtist)
+        XCTAssertEqual(service.currentTrackTitle, "Station Jingle")
+    }
+
+    func testMetadataParsingMultipleSeparators() {
+        let station = TestFixtures.makeStation()
+        service.play(station: station)
+
+        service.parseStreamTitle("AC/DC - Back In Black - Live")
+        XCTAssertEqual(service.currentArtist, "AC/DC")
+        XCTAssertEqual(service.currentTrackTitle, "Back In Black - Live")
+    }
+
+    func testTimedMetadataUpdatesTrackTitle() {
+        let station = TestFixtures.makeStation()
+        service.play(station: station)
+
+        // Verify metadata starts nil
+        XCTAssertNil(service.currentTrackTitle)
+        XCTAssertNil(service.currentArtist)
+
+        // Simulate metadata update
+        service.parseStreamTitle("Beatles - Yesterday")
+        XCTAssertEqual(service.currentArtist, "Beatles")
+        XCTAssertEqual(service.currentTrackTitle, "Yesterday")
     }
 }

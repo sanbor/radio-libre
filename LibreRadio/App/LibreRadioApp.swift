@@ -17,6 +17,7 @@ struct LibreRadioApp: App {
                     RadioPlaybackAction.stop = { AudioPlayerService.shared.stop() }
                     NowPlayingService.shared.setAudioService(playerVM.audioService)
                     NowPlayingService.shared.setPlayerViewModel(playerVM)
+                    NowPlayingService.shared.setFavoritesViewModel(favoritesVM)
                     LiveActivityService.shared.endOrphanedActivities()
                     await ServerDiscoveryService.shared.resolveIfNeeded()
                     await favoritesVM.load()

@@ -73,6 +73,25 @@ struct FullPlayerView: View {
                 }
             }
 
+            // Now playing track info
+            if let title = playerVM.currentTrackTitle {
+                VStack(spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                    if let artist = playerVM.currentArtist {
+                        Text(artist)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(1)
+                    }
+                }
+                .animation(.easeInOut, value: title)
+                .animation(.easeInOut, value: playerVM.currentArtist)
+            }
+
             // Player controls
             PlayerControlsView()
 

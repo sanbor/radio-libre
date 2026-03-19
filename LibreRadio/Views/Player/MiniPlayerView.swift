@@ -66,6 +66,11 @@ struct MiniPlayerView: View {
                         .font(.caption)
                         .foregroundStyle(.red)
                         .lineLimit(1)
+                } else if let title = playerVM.currentTrackTitle {
+                    Text(playerVM.currentArtist.map { "\($0) — \(title)" } ?? title)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 } else if let codec = station.codec, !codec.isEmpty {
                     Text("\(codec) \u{00B7} \(station.bitrateLabel)")
                         .font(.caption)
