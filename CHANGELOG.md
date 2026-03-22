@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-03-22 — Revert alphabet index to simple direct-mapping scroll
+
+**Prompt:** `/implement recently there was an improvement to the alphabet index for sorted lists in browse section. the alphabet functionality is too hard to use because scrolling through the list is very cumbersome. I like the idea of having alphabet + numbers + # symbol for everything else. Go back to the old way of scrolling though the index list`
+
+**Changes:**
+- Reverted `AlphabetIndexView` from the GeometryReader/clipping/auto-scroll implementation back to the simple VStack with direct linear gesture mapping
+- Removed overflow handling (scroll offset, clipped container, fraction-based centering) — all letters are now rendered at full height with direct finger-to-letter mapping
+- Kept the alphabet + numbers + `#` section categorization unchanged (that logic lives in the list views, not AlphabetIndexView)
+
+## 2026-03-22 — Track history browsing in full player
+
+**Prompt:** `/implement in expanded listening now, where the name of artist/song is displayed, show left arrow (and right arrow if left arrows was pressed) so the user can read previously listenes songs. If the user taps in the name of the current song, show a history list of every played song and a timestamp. When there is no artist and song available, write the station name`
+
+**Changes:**
+- Added `TrackHistoryItem` model for in-memory, session-scoped track metadata history
+- Added `trackHistory` array to `AudioPlayerService`, populated from ICY metadata in `parseStreamTitle` with dedup against consecutive identical entries
+- Added track browse index and navigation methods to `PlayerViewModel` (`browseTrackBack`, `browseTrackForward`, `browsedTrackTitle`, `browsedArtist`)
+- Replaced the static track info section in `FullPlayerView` with left/right chevron browse controls
+- Station name shown as fallback when no ICY metadata is available
+- Created `TrackHistorySheet` view — tapping track info opens a sheet with full session history (reverse chronological, with relative timestamps)
+- Track history is cross-station and survives stop/station changes (session-scoped, not persisted)
+- Added 24 new tests across `TrackHistoryItemTests`, `AudioPlayerServiceTests`, and `PlayerViewModelTests`
+
 ## 2026-03-22 — Show country + subdivision in full player
 
 **Prompt:** `/implement show {country flag} {country full name} {countrysubdivision}. For example 🇳🇱 Netherlands, Amsterdam. If there is no countrysubdivision, just show 🇳🇱 Netherlands`
