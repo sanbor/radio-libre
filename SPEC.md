@@ -300,7 +300,7 @@ Allows HTTP (non-HTTPS) for media streams only via `NSAllowsArbitraryLoadsForMed
 
 ## Lock Screen & Control Center
 
-`NowPlayingService` sets `MPNowPlayingInfoCenter.nowPlayingInfo` with station name, artist metadata (country code + subdivision + codec + bitrate), live stream flag, playback rate, and favicon artwork. This drives the standard lock screen Now Playing widget, Control Center playback controls, and CarPlay Now Playing tab.
+`NowPlayingService` sets `MPNowPlayingInfoCenter.nowPlayingInfo` with station name, artist metadata (country code + subdivision + codec + bitrate), live stream flag, playback rate, and favicon artwork. This drives the standard lock screen Now Playing widget, Control Center playback controls, and CarPlay Now Playing tab. When switching stations, artwork is immediately set to a default placeholder (antenna SF Symbol on gray background, matching the in-app favicon placeholder) while the new station's favicon loads asynchronously. Stations without a favicon retain the placeholder.
 
 ### Remote Commands
 

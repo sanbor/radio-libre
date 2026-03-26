@@ -668,8 +668,11 @@ final class NowPlayingService {
     //   - previousTrackCommand → play previous favorite
 
     func updateNowPlaying(station: StationDTO, isPlaying: Bool)
-    // Sets nowPlayingInfo with station name, artist metadata (country code + subdivision + codec + bitrate, no flag emoji),
-    // live stream flag, playback rate, and fetches favicon artwork asynchronously.
+    // Sets a default placeholder artwork (antenna SF Symbol on gray background) immediately,
+    // then sets nowPlayingInfo with station name, artist metadata (country code + subdivision +
+    // codec + bitrate, no flag emoji), live stream flag, playback rate. Fetches favicon artwork
+    // asynchronously and replaces the placeholder if successful. Stations without a favicon
+    // retain the placeholder, ensuring the lock screen always shows artwork.
     // Rationale: keeping nowPlayingInfo populated ensures CarPlay Now Playing tab
     // and the standard Control Center widget work, while Live Activity provides
     // the enhanced lock screen experience.
@@ -1364,6 +1367,11 @@ struct LibreRadioApp: App {
 
 **Potential improvements:**
 - `MetadataOutputHandler` captures `AudioPlayerService` into a `Task` closure. In Swift 6 strict concurrency mode, this may produce a Sendable warning since `AudioPlayerService` doesn't explicitly conform to `Sendable`. If upgrading to strict concurrency, add `@unchecked Sendable` or restructure the capture.
+- **Cache the placeholder image** — `defaultPlaceholderImage()` renders a new UIImage on every station switch. Could lazily cache it in a stored property since the image never changes.
+- **Dark mode lock screen** — The placeholder uses `systemGray6` and `secondaryLabel` which adapt to system appearance, but the lock screen always renders in dark mode. Could force dark-mode colors for better contrast.
+- **Higher-resolution placeholder** — 300×300 may appear slightly soft on 3x Retina displays. Could render at 600×600 with `@3x` scale.
+- **CarPlay placeholder consistency** — CarPlay list items use an inline SF Symbol placeholder; could share the rendered `defaultPlaceholderImage()` for visual consistency.
+- **Pre-fetch favicons for adjacent favorites** — Pre-warm the image cache for next/previous favorites so artwork loads instantly when skipping stations, eliminating the placeholder flash.
 
 ---
 

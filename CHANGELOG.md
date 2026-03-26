@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-03-26 — Default antenna artwork on lock screen
+
+**Prompt:** `/implement show a default radio antenna artwork on lock screen when station has no favicon`
+
+**Changes:**
+- `NowPlayingService.updateNowPlaying()` now renders a 300×300 placeholder image (antenna SF Symbol on `systemGray6` background) and sets it as artwork immediately on every station switch
+- Real favicon is fetched asynchronously and replaces the placeholder when available; stations without a favicon retain the placeholder
+- Extracted `setArtwork(_:)` and `defaultPlaceholderImage()` private helpers to reduce duplication
+- Added 2 tests: placeholder artwork is set for faviconless stations, stale artwork is replaced with placeholder
+- Updated SPEC.md and PLAN.md to document the placeholder artwork behavior
+
 ## 2026-03-26 — Fix Xcode deprecation and Sendable warnings
 
 **Prompt:** `/implement fix Xcode warnings: timedMetadata deprecated, stringValue deprecated, non-Sendable function conversion`

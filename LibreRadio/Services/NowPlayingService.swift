@@ -31,11 +31,15 @@ final class NowPlayingService {
     func updateNowPlaying(station: StationDTO, isPlaying: Bool) {
         currentStationId = station.stationuuid
 
+        let placeholder = defaultPlaceholderImage()
+        let placeholderArtwork = MPMediaItemArtwork(boundsSize: placeholder.size) { _ in placeholder }
+
         var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
         info[MPMediaItemPropertyTitle] = station.name
         info[MPMediaItemPropertyArtist] = buildArtistString(for: station)
         info[MPNowPlayingInfoPropertyIsLiveStream] = true
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
+        info[MPMediaItemPropertyArtwork] = placeholderArtwork
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
 
         fetchArtwork(for: station)
@@ -79,11 +83,35 @@ final class NowPlayingService {
         Task {
             guard let image = await ImageCacheService.shared.image(for: url) else { return }
             guard currentStationId == stationId else { return }
+            setArtwork(image)
+        }
+    }
 
-            let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-            var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
-            info[MPMediaItemPropertyArtwork] = artwork
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    private func setArtwork(_ image: UIImage) {
+        let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+        info[MPMediaItemPropertyArtwork] = artwork
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    }
+
+    private func defaultPlaceholderImage() -> UIImage {
+        let size = CGSize(width: 300, height: 300)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { context in
+            UIColor.systemGray6.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+
+            let config = UIImage.SymbolConfiguration(pointSize: 80, weight: .regular)
+            if let symbol = UIImage(systemName: "antenna.radiowaves.left.and.right", withConfiguration: config) {
+                let symbolSize = symbol.size
+                let origin = CGPoint(
+                    x: (size.width - symbolSize.width) / 2,
+                    y: (size.height - symbolSize.height) / 2
+                )
+                UIColor.secondaryLabel.setFill()
+                symbol.withTintColor(.secondaryLabel, renderingMode: .alwaysOriginal)
+                    .draw(at: origin)
+            }
         }
     }
 

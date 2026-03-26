@@ -1,5 +1,6 @@
 import XCTest
 import MediaPlayer
+import UIKit
 @testable import LibreRadio
 
 @MainActor
@@ -71,6 +72,36 @@ final class NowPlayingServiceTests: XCTestCase {
         XCTAssertNotNil(artist)
         XCTAssertTrue(artist?.contains("MP3") == true)
         XCTAssertTrue(artist?.contains("128k") == true)
+    }
+
+    func testUpdateNowPlayingSetsPlaceholderArtworkForStationWithoutFavicon() {
+        // Switch to a station without a favicon
+        let station = StationDTOTests.makeStation(name: "No Favicon Station", favicon: nil)
+        service.updateNowPlaying(station: station, isPlaying: true)
+
+        let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        XCTAssertEqual(info?[MPMediaItemPropertyTitle] as? String, "No Favicon Station")
+        XCTAssertNotNil(info?[MPMediaItemPropertyArtwork], "Placeholder artwork should be set when station has no favicon")
+    }
+
+    func testUpdateNowPlayingReplacesStaleArtworkWithPlaceholder() {
+        // Simulate a previous station with artwork
+        let oldArtwork = MPMediaItemArtwork(boundsSize: CGSize(width: 100, height: 100)) { _ in UIImage() }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+            MPMediaItemPropertyTitle: "Previous Station",
+            MPMediaItemPropertyArtwork: oldArtwork
+        ]
+
+        // Switch to a station without a favicon — old artwork should be replaced
+        let station = StationDTOTests.makeStation(name: "No Favicon Station", favicon: nil)
+        service.updateNowPlaying(station: station, isPlaying: true)
+
+        let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        XCTAssertEqual(info?[MPMediaItemPropertyTitle] as? String, "No Favicon Station")
+        // Artwork should exist (placeholder), but not be the old one
+        let currentArtwork = info?[MPMediaItemPropertyArtwork] as? MPMediaItemArtwork
+        XCTAssertNotNil(currentArtwork, "Should have placeholder artwork, not nil")
+        XCTAssertFalse(currentArtwork === oldArtwork, "Should not retain the previous station's artwork")
     }
 
     // MARK: - updateStreamMetadata
