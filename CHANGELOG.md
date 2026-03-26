@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-03-26 — Fix Xcode deprecation and Sendable warnings
+
+**Prompt:** `/implement fix Xcode warnings: timedMetadata deprecated, stringValue deprecated, non-Sendable function conversion`
+
+**Changes:**
+- Replaced deprecated `timedMetadata` KVO observation in `AudioPlayerService` with `AVPlayerItemMetadataOutput` delegate pattern
+- Created private `MetadataOutputHandler` class (NSObject subclass) to conform to `AVPlayerItemMetadataOutputPushDelegate`
+- Replaced deprecated synchronous `stringValue` with `await item.load(.stringValue)` and `commonKey` with `item.identifier == .commonIdentifierTitle`
+- Fixed `ServerDiscoveryService` Sendable warning by wrapping bare function reference in a sendable closure literal
+- Zero warnings from both files, all 418 tests pass
+
 ## 2026-03-26 — Remove widget extension and Live Activity
 
 **Changes:**

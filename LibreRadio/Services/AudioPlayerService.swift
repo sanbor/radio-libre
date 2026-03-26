@@ -2,6 +2,34 @@ import AVFoundation
 import AVKit
 import Foundation
 
+// MARK: - Metadata Output Delegate
+
+/// Handles timed metadata from AVPlayerItemMetadataOutput.
+/// Separate class because AVPlayerItemMetadataOutputPushDelegate requires NSObjectProtocol.
+private class MetadataOutputHandler: NSObject, AVPlayerItemMetadataOutputPushDelegate {
+    weak var service: AudioPlayerService?
+
+    func metadataOutput(
+        _ output: AVPlayerItemMetadataOutput,
+        didOutputTimedMetadataGroups groups: [AVTimedMetadataGroup],
+        from track: AVPlayerItemTrack?
+    ) {
+        guard let service else { return }
+        Task { @MainActor in
+            for group in groups {
+                for item in group.items {
+                    if item.identifier == .commonIdentifierTitle,
+                       let value = try? await item.load(.stringValue),
+                       !value.isEmpty {
+                        service.parseStreamTitle(value)
+                        return
+                    }
+                }
+            }
+        }
+    }
+}
+
 @MainActor
 final class AudioPlayerService: ObservableObject {
     static let shared = AudioPlayerService()
@@ -90,7 +118,7 @@ final class AudioPlayerService: ObservableObject {
     private var timeControlObservation: NSKeyValueObservation?
     private var bufferEmptyObservation: NSKeyValueObservation?
     private var bufferKeepUpObservation: NSKeyValueObservation?
-    private var metadataObservation: NSKeyValueObservation?
+    private let metadataOutputHandler = MetadataOutputHandler()
     private let service: RadioBrowserService
     private let nowPlayingService: NowPlayingService
     private var currentBufferDuration: TimeInterval = initialBufferDuration
@@ -112,6 +140,7 @@ final class AudioPlayerService: ObservableObject {
         self.service = service
         self.nowPlayingService = nowPlayingService ?? NowPlayingService.shared
         player.volume = volume
+        metadataOutputHandler.service = self
         setupAudioSession()
         setupInterruptionObserver()
         setupRouteChangeObserver()
@@ -158,8 +187,6 @@ final class AudioPlayerService: ObservableObject {
         bufferEmptyObservation = nil
         bufferKeepUpObservation?.invalidate()
         bufferKeepUpObservation = nil
-        metadataObservation?.invalidate()
-        metadataObservation = nil
 
         let asset = AVURLAsset(url: streamURL)
         let item = AVPlayerItem(asset: asset)
@@ -169,7 +196,7 @@ final class AudioPlayerService: ObservableObject {
 
         observePlayerItemStatus(item: item, station: station)
         observeBufferState(item: item, station: station)
-        observeTimedMetadata(item: item)
+        setupMetadataOutput(item: item)
 
         player.replaceCurrentItem(with: item)
         player.play()
@@ -206,8 +233,6 @@ final class AudioPlayerService: ObservableObject {
         bufferEmptyObservation = nil
         bufferKeepUpObservation?.invalidate()
         bufferKeepUpObservation = nil
-        metadataObservation?.invalidate()
-        metadataObservation = nil
         isBuffering = false
         stallCount = 0
         currentBufferDuration = Self.initialBufferDuration
@@ -368,21 +393,10 @@ final class AudioPlayerService: ObservableObject {
         }
     }
 
-    private func observeTimedMetadata(item: AVPlayerItem) {
-        metadataObservation = item.observe(\.timedMetadata, options: [.new]) { [weak self] item, _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                guard let metadataItems = item.timedMetadata else { return }
-
-                for metadata in metadataItems {
-                    if metadata.commonKey == AVMetadataKey.commonKeyTitle, let value = metadata.stringValue, !value.isEmpty {
-                        self.parseStreamTitle(value)
-                        return
-                    }
-                }
-            }
-        }
-        // notifyStateChange() called by parseStreamTitle() below
+    private func setupMetadataOutput(item: AVPlayerItem) {
+        let output = AVPlayerItemMetadataOutput(identifiers: nil)
+        output.setDelegate(metadataOutputHandler, queue: .main)
+        item.add(output)
     }
 
     func parseStreamTitle(_ rawTitle: String) {

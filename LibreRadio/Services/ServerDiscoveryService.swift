@@ -19,7 +19,7 @@ actor ServerDiscoveryService {
 
     init(
         defaults: UserDefaults = .standard,
-        dnsResolver: @escaping @Sendable () async throws -> [String] = DNSResolver.resolveRadioBrowserServers
+        dnsResolver: @escaping @Sendable () async throws -> [String] = { try await DNSResolver.resolveRadioBrowserServers() }
     ) {
         self.defaults = defaults
         self.dnsResolver = dnsResolver

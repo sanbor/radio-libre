@@ -32,7 +32,7 @@
 | Stream playback | ExoPlayer/MediaPlayer | `AVPlayer` with HLS + progressive streams |
 | Background audio | Foreground service | `AVAudioSession.playback` + `UIBackgroundModes: audio` |
 | Lock screen controls | MediaSession + notification | `MPNowPlayingInfoCenter` + `MPRemoteCommandCenter` |
-| Now playing metadata | ICY metadata extraction | AVPlayer metadata observation |
+| Now playing metadata | ICY metadata extraction | `AVPlayerItemMetadataOutput` delegate |
 | Favorites | SharedPreferences JSON | SwiftData `FavoriteStation` model |
 | Favorites reordering | Drag-and-drop | SwiftUI `List` with `.onMove` |
 | Play history | SharedPreferences (25 entries) | SwiftData `HistoryEntry` model (50 entries) |
@@ -1181,7 +1181,7 @@ struct LibreRadioApp: App {
 **Verify:** Can play any station, audio continues in background, lock screen shows station name and controls.
 
 **Implementation notes (Phase 2):**
-- `AudioPlayerService` uses `@MainActor` (not `actor`) because `AVPlayer` requires main-thread access. Uses KVO on `player.timeControlStatus` and `playerItem.status` for state transitions.
+- `AudioPlayerService` uses `@MainActor` (not `actor`) because `AVPlayer` requires main-thread access. Uses KVO on `player.timeControlStatus` and `playerItem.status` for state transitions. ICY stream metadata is captured via `AVPlayerItemMetadataOutput` delegate (not the deprecated `timedMetadata` KVO). The delegate is a separate `NSObject` subclass (`MetadataOutputHandler`) because `AVPlayerItemMetadataOutputPushDelegate` requires `NSObjectProtocol` conformance, which `AudioPlayerService` doesn't have. Uses `item.identifier == .commonIdentifierTitle` and `await item.load(.stringValue)` for non-deprecated metadata access.
 - `NowPlayingService` uses a `setAudioService(_:)` method (called at app startup) to break the circular dependency between audio and now-playing services. Remote command callbacks use `[weak self]` to avoid retain cycles.
 - `PlayerViewModel` forwards `audioService.objectWillChange` via a Combine sink to trigger SwiftUI updates. This is the only use of Combine in the project — it bridges `ObservableObject` publishers between the service and view model.
 - `AVAudioSession` category uses `.allowBluetoothA2DP` (not the deprecated `.allowBluetooth`).
@@ -1361,6 +1361,9 @@ struct LibreRadioApp: App {
 - **HomeViewModel caught all non-AppError exceptions as `.networkUnavailable`.** Now distinguishes `URLError` codes (`.notConnectedToInternet`, `.timedOut`, etc.) for more accurate error messages. Unknown errors map to `.serverError(statusCode: 0)` rather than falsely claiming no internet.
 - **FavoritesService.syncWithServer() race condition was investigated and found safe.** Actor isolation serializes concurrent calls. The `await` suspension point does not allow interleaving within the same actor. No code change needed.
 - **Magic numbers extracted:** `ImageCacheService.memoryCacheLimit` (was inline `200`).
+
+**Potential improvements:**
+- `MetadataOutputHandler` captures `AudioPlayerService` into a `Task` closure. In Swift 6 strict concurrency mode, this may produce a Sendable warning since `AudioPlayerService` doesn't explicitly conform to `Sendable`. If upgrading to strict concurrency, add `@unchecked Sendable` or restructure the capture.
 
 ---
 
