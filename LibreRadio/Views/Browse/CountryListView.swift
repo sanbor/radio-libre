@@ -93,7 +93,7 @@ struct CountryListView: View {
             List {
                 if verticalSizeClass == .compact {
                     Color.clear
-                        .frame(height: 28)
+                        .frame(height: 72)
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets())
@@ -116,6 +116,7 @@ struct CountryListView: View {
                     .listRowSeparator(.hidden)
             }
             .listStyle(.plain)
+            .compactSectionSpacing()
             .safeAreaInset(edge: .trailing, spacing: 0) {
                 AlphabetIndexView(letters: letters) { letter in
                     withAnimation {
@@ -138,6 +139,7 @@ struct CountryListView: View {
                 .listRowSeparator(.hidden)
         }
         .listStyle(.plain)
+        .compactSectionSpacing()
     }
 
     private func countryRow(_ country: Country) -> some View {

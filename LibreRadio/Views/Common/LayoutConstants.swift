@@ -13,3 +13,16 @@ enum LayoutConstants {
     static let miniPlayerShadowY: CGFloat = 4
     static let miniPlayerMaxWidth: CGFloat = 500
 }
+
+extension View {
+    @ViewBuilder
+    func compactSectionSpacing() -> some View {
+        if #available(iOS 17.0, *) {
+            self
+                .listSectionSpacing(.compact)
+                .contentMargins(.top, 0, for: .scrollContent)
+        } else {
+            self
+        }
+    }
+}
