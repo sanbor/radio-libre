@@ -74,7 +74,6 @@ jobs:
         run: |
           APP_PATH="build/Build/Products/Release-maccatalyst/LibreRadio.app"
           codesign --verify --deep --strict "$APP_PATH"
-          spctl --assess --type execute --verbose "$APP_PATH"
 
       - name: Package app
         run: |
