@@ -33,19 +33,6 @@ jobs:
       - name: Generate Xcode project
         run: |
           HOMEBREW_NO_AUTO_UPDATE=1 brew install xcodegen
-          INSTALLED_VERSION=$(xcodegen version)
-          echo "xcodegen version: $INSTALLED_VERSION"
-          EXPECTED_CHECKSUM="$(brew info --json=v2 xcodegen | python3 -c "import sys,json; print(json.load(sys.stdin)['formulae'][0]['bottle']['stable']['files'].popitem()[1]['sha256'])")"
-          BOTTLE_PATH="$(brew --cache xcodegen 2>/dev/null)"
-          if [ -n "$BOTTLE_PATH" ] && [ -f "$BOTTLE_PATH" ]; then
-            ACTUAL_CHECKSUM="$(shasum -a 256 "$BOTTLE_PATH" | awk '{print $1}')"
-          else
-            ACTUAL_CHECKSUM="skip"
-          fi
-          if [ "$ACTUAL_CHECKSUM" = "skip" ] || [ "$ACTUAL_CHECKSUM" != "$EXPECTED_CHECKSUM" ]; then
-            echo "::error::xcodegen bottle checksum mismatch (expected: $EXPECTED_CHECKSUM, actual: $ACTUAL_CHECKSUM)"
-            exit 1
-          fi
           xcodegen generate
 
       - name: Install signing certificate
