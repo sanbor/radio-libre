@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-04-04 — macOS release workflow on tag publish
+
+**Prompt:** `/implement release macos version on github when publishing a tag`
+
+**Changes:**
+- Created `.github/workflows/release.yml` — on `v*` tag push, builds Mac Catalyst Release and creates a GitHub Release with `LibreRadio-macOS.zip`
+- Enabled Mac Catalyst in `project.yml` by switching both targets from `platform: iOS` to `supportedDestinations: [iOS, macCatalyst]`
+- Wrapped `CarPlaySceneDelegate.swift` in `#if canImport(CarPlay)` guard (CarPlay unavailable on Mac Catalyst)
+- Updated SPEC.md and PLAN.md with CI/CD documentation
+
 ## 2026-03-29 — Fix landscape spacing: search bar overlap and mini player coverage
 
 **Prompt:** `/implement the toggle for sort works great. The only detail is too much white space when the phone is in landscape position / when sorting by name in landscape mode the top item is covered by the search bar, the bottom item is covered by the playing now section`

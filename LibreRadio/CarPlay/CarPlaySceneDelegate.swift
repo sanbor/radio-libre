@@ -1,3 +1,4 @@
+#if canImport(CarPlay)
 import UIKit
 import CarPlay
 
@@ -180,3 +181,4 @@ extension CarPlaySceneDelegate {
         return item
     }
 }
+#endif

@@ -1395,3 +1395,29 @@ These features can be added after the core app is stable:
 7. **M3U Export/Import** — share favorites as playlist files
 8. **iPad Layout** — sidebar navigation with split view
 9. **macOS (Catalyst/native)** — menu bar player
+
+---
+
+## CI/CD
+
+### iOS CI (`.github/workflows/ios.yml`)
+
+Existing workflow: builds and runs tests on push/PR to `main`.
+
+### macOS Release (`.github/workflows/release.yml`)
+
+Triggers on tag push matching `v*`. Steps:
+1. Install XcodeGen, generate project
+2. Build Mac Catalyst Release (`generic/platform=macOS,variant=Mac Catalyst`, `CODE_SIGNING_ALLOWED=NO`)
+3. Zip `.app` bundle with `ditto`
+4. Create GitHub Release via `gh release create` with auto-generated notes
+
+**Mac Catalyst enablement:**
+- `project.yml` uses `supportedDestinations: [iOS, macCatalyst]` instead of `platform: iOS`
+- `CarPlaySceneDelegate.swift` is wrapped in `#if canImport(CarPlay)` since CarPlay framework is unavailable on Mac Catalyst
+- No other code changes needed — UIKit, AVFoundation, MediaPlayer all work on Mac Catalyst
+
+**Implementation notes (CI/CD):**
+- Mac Catalyst build compiles cleanly with no code changes beyond the CarPlay guard. All UIKit APIs used in the project are available on Mac Catalyst.
+- The `ditto -c -k --keepParent` command is preferred over `zip` on macOS because it preserves resource forks and extended attributes in the .app bundle.
+- `--generate-notes` on `gh release create` auto-generates release notes from commits since the previous tag.

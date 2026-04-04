@@ -244,3 +244,9 @@ struct FullPlayerView: View {
         }
     }
 }
+#Preview {
+    FullPlayerView()
+        .environmentObject(PlayerViewModel.shared)
+        .environmentObject(FavoritesViewModel())
+}
+

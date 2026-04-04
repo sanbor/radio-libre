@@ -541,3 +541,8 @@ Sidebar navigation with `NavigationSplitView` replacing the tab bar on iPad. Sid
 #### macOS (Catalyst or native)
 
 Menu bar player with a popover showing the mini player and quick access to favorites. Full window with sidebar navigation matching the iPad layout. Native keyboard shortcuts for playback control.
+
+#### CI/CD
+
+- **iOS CI** (`.github/workflows/ios.yml`): builds and tests on push/PR to `main`
+- **macOS Release** (`.github/workflows/release.yml`): on tag push (`v*`), builds Mac Catalyst Release and creates a GitHub Release with `LibreRadio-macOS.zip` attached. Uses `gh release create --generate-notes` for auto-generated release notes.

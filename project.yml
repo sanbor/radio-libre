@@ -23,7 +23,7 @@ schemes:
 targets:
   LibreRadio:
     type: application
-    platform: iOS
+    supportedDestinations: [iOS, macCatalyst]
     sources:
       - LibreRadio
     settings:
@@ -69,7 +69,7 @@ targets:
 
   LibreRadioTests:
     type: bundle.unit-test
-    platform: iOS
+    supportedDestinations: [iOS, macCatalyst]
     sources:
       - LibreRadioTests
     dependencies:
