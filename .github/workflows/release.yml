@@ -3,7 +3,7 @@ name: Release macOS
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
 
 permissions:
   contents: write
@@ -16,11 +16,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Generate Xcode project
         run: |
           HOMEBREW_NO_AUTO_UPDATE=1 brew install xcodegen
+          INSTALLED_VERSION=$(xcodegen version)
+          echo "xcodegen version: $INSTALLED_VERSION"
+          EXPECTED_CHECKSUM="$(brew info --json=v2 xcodegen | python3 -c "import sys,json; print(json.load(sys.stdin)['formulae'][0]['bottle']['stable']['files'].popitem()[1]['sha256'])")"
+          ACTUAL_CHECKSUM="$(shasum -a 256 "$(brew --cellar xcodegen)/../.bottle/xcodegen"*.tar.gz 2>/dev/null | awk '{print $1}' || echo 'skip')"
+          echo "Expected: $EXPECTED_CHECKSUM"
+          echo "Actual: $ACTUAL_CHECKSUM"
           xcodegen generate
 
       - name: Install signing certificate
@@ -32,6 +38,7 @@ jobs:
           CERT_PATH="$RUNNER_TEMP/certificate.p12"
           KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
 
+          umask 077
           echo -n "$CERTIFICATE" | base64 --decode -o "$CERT_PATH"
 
           security create-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
@@ -42,6 +49,8 @@ jobs:
           security list-keychain -d user -s "$KEYCHAIN_PATH"
 
       - name: Build macOS app (Mac Catalyst)
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           xcodebuild build \
             -scheme LibreRadio \
@@ -50,7 +59,14 @@ jobs:
             -derivedDataPath build/ \
             CODE_SIGNING_ALLOWED=YES \
             CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             -quiet
+
+      - name: Verify code signature
+        run: |
+          APP_PATH="build/Build/Products/Release-maccatalyst/LibreRadio.app"
+          codesign --verify --deep --strict "$APP_PATH"
+          spctl --assess --type execute --verbose "$APP_PATH"
 
       - name: Package app
         run: |
@@ -67,7 +83,12 @@ jobs:
             --apple-id "$APPLE_ID" \
             --password "$APPLE_ID_PWD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait
+            --wait | tee "$RUNNER_TEMP/notarization.log"
+          if ! grep -q "status: Accepted" "$RUNNER_TEMP/notarization.log"; then
+            echo "::error::Notarization was not accepted"
+            cat "$RUNNER_TEMP/notarization.log"
+            exit 1
+          fi
 
       - name: Staple notarization ticket
         run: |
@@ -81,6 +102,28 @@ jobs:
           APP_PATH="build/Build/Products/Release-maccatalyst/LibreRadio.app"
           hdiutil create -volname LibreRadio -srcfolder "$APP_PATH" \
             -ov -format UDZO LibreRadio-macOS.dmg
+
+      - name: Sign DMG
+        run: |
+          codesign --force --sign "Developer ID Application" LibreRadio-macOS.dmg
+
+      - name: Notarize DMG
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PWD: ${{ secrets.APPLE_ID_PWD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit LibreRadio-macOS.dmg \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PWD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait | tee "$RUNNER_TEMP/dmg-notarization.log"
+          if ! grep -q "status: Accepted" "$RUNNER_TEMP/dmg-notarization.log"; then
+            echo "::error::DMG notarization was not accepted"
+            cat "$RUNNER_TEMP/dmg-notarization.log"
+            exit 1
+          fi
+          xcrun stapler staple LibreRadio-macOS.dmg
 
       - name: Compute checksums
         run: |
@@ -109,4 +152,5 @@ jobs:
         if: always()
         run: |
           rm -f "$RUNNER_TEMP/certificate.p12"
+          rm -f "$RUNNER_TEMP/notarization.log" "$RUNNER_TEMP/dmg-notarization.log"
           security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" 2>/dev/null || true
