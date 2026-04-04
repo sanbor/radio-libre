@@ -55,18 +55,6 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
           security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed -e 's/"//g')
 
-      - name: Verify signing certificate
-        run: |
-          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
-          echo "=== Keychain search list ==="
-          security list-keychains -d user
-          echo "=== Default keychain ==="
-          security default-keychain -d user
-          echo "=== Identities in custom keychain ==="
-          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
-          echo "=== All codesigning identities ==="
-          security find-identity -v -p codesigning
-
       - name: Build macOS app (Mac Catalyst)
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
