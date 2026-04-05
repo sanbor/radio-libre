@@ -89,22 +89,60 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           SUBMIT_LOG="$RUNNER_TEMP/notarization.log"
+          INFO_LOG="$RUNNER_TEMP/notarization-info.log"
+
+          # Submit the artifact; do NOT use --wait, we poll ourselves so we
+          # can tolerate transient network errors during the long poll phase.
           xcrun notarytool submit LibreRadio-macOS.zip \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_ID_PWD" \
-            --team-id "$APPLE_TEAM_ID" \
-            --wait > "$SUBMIT_LOG" 2>&1 || true
+            --team-id "$APPLE_TEAM_ID" > "$SUBMIT_LOG" 2>&1
           SUBMIT_ID=$(awk '/^  id: / {print $2; exit}' "$SUBMIT_LOG")
-          if ! grep -q "status: Accepted" "$SUBMIT_LOG"; then
-            echo "::error::Notarization was not accepted"
+          if [ -z "$SUBMIT_ID" ]; then
+            echo "::error::Failed to obtain notarization submission id"
             grep -v -i "apple-id\|password" "$SUBMIT_LOG" || true
-            if [ -n "$SUBMIT_ID" ]; then
-              echo "--- Apple notary log for $SUBMIT_ID ---"
-              xcrun notarytool log "$SUBMIT_ID" \
+            exit 1
+          fi
+          echo "Notarization submission id: $SUBMIT_ID"
+
+          # Poll until terminal status, tolerating transient network errors.
+          STATUS=""
+          CONSECUTIVE_FAILURES=0
+          DEADLINE=$(( $(date +%s) + 1800 ))  # 30 minutes
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            sleep 30
+            if ! xcrun notarytool info "$SUBMIT_ID" \
                 --apple-id "$APPLE_ID" \
                 --password "$APPLE_ID_PWD" \
-                --team-id "$APPLE_TEAM_ID" || true
+                --team-id "$APPLE_TEAM_ID" > "$INFO_LOG" 2>&1; then
+              CONSECUTIVE_FAILURES=$(( CONSECUTIVE_FAILURES + 1 ))
+              echo "notarytool info failed (consecutive failures: $CONSECUTIVE_FAILURES) — retrying"
+              if [ "$CONSECUTIVE_FAILURES" -ge 5 ]; then
+                echo "::error::Too many consecutive failures polling notarization status"
+                grep -v -i "apple-id\|password" "$INFO_LOG" || true
+                exit 1
+              fi
+              continue
             fi
+            CONSECUTIVE_FAILURES=0
+            STATUS=$(awk '/^  status: / {print $2; exit}' "$INFO_LOG")
+            echo "Notarization status: $STATUS"
+            case "$STATUS" in
+              Accepted) break ;;
+              Invalid|Rejected)
+                echo "::error::Notarization was not accepted (status: $STATUS)"
+                echo "--- Apple notary log for $SUBMIT_ID ---"
+                xcrun notarytool log "$SUBMIT_ID" \
+                  --apple-id "$APPLE_ID" \
+                  --password "$APPLE_ID_PWD" \
+                  --team-id "$APPLE_TEAM_ID" || true
+                exit 1
+                ;;
+            esac
+          done
+
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "::error::Timed out waiting for notarization (last status: ${STATUS:-unknown})"
             exit 1
           fi
 
@@ -135,22 +173,60 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           DMG_LOG="$RUNNER_TEMP/dmg-notarization.log"
+          DMG_INFO_LOG="$RUNNER_TEMP/dmg-notarization-info.log"
+
+          # Submit the artifact; do NOT use --wait, we poll ourselves so we
+          # can tolerate transient network errors during the long poll phase.
           xcrun notarytool submit LibreRadio-macOS.dmg \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_ID_PWD" \
-            --team-id "$APPLE_TEAM_ID" \
-            --wait > "$DMG_LOG" 2>&1 || true
+            --team-id "$APPLE_TEAM_ID" > "$DMG_LOG" 2>&1
           DMG_SUBMIT_ID=$(awk '/^  id: / {print $2; exit}' "$DMG_LOG")
-          if ! grep -q "status: Accepted" "$DMG_LOG"; then
-            echo "::error::DMG notarization was not accepted"
+          if [ -z "$DMG_SUBMIT_ID" ]; then
+            echo "::error::Failed to obtain DMG notarization submission id"
             grep -v -i "apple-id\|password" "$DMG_LOG" || true
-            if [ -n "$DMG_SUBMIT_ID" ]; then
-              echo "--- Apple notary log for $DMG_SUBMIT_ID ---"
-              xcrun notarytool log "$DMG_SUBMIT_ID" \
+            exit 1
+          fi
+          echo "DMG notarization submission id: $DMG_SUBMIT_ID"
+
+          # Poll until terminal status, tolerating transient network errors.
+          DMG_STATUS=""
+          CONSECUTIVE_FAILURES=0
+          DEADLINE=$(( $(date +%s) + 1800 ))  # 30 minutes
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            sleep 30
+            if ! xcrun notarytool info "$DMG_SUBMIT_ID" \
                 --apple-id "$APPLE_ID" \
                 --password "$APPLE_ID_PWD" \
-                --team-id "$APPLE_TEAM_ID" || true
+                --team-id "$APPLE_TEAM_ID" > "$DMG_INFO_LOG" 2>&1; then
+              CONSECUTIVE_FAILURES=$(( CONSECUTIVE_FAILURES + 1 ))
+              echo "notarytool info failed (consecutive failures: $CONSECUTIVE_FAILURES) — retrying"
+              if [ "$CONSECUTIVE_FAILURES" -ge 5 ]; then
+                echo "::error::Too many consecutive failures polling DMG notarization status"
+                grep -v -i "apple-id\|password" "$DMG_INFO_LOG" || true
+                exit 1
+              fi
+              continue
             fi
+            CONSECUTIVE_FAILURES=0
+            DMG_STATUS=$(awk '/^  status: / {print $2; exit}' "$DMG_INFO_LOG")
+            echo "DMG notarization status: $DMG_STATUS"
+            case "$DMG_STATUS" in
+              Accepted) break ;;
+              Invalid|Rejected)
+                echo "::error::DMG notarization was not accepted (status: $DMG_STATUS)"
+                echo "--- Apple notary log for $DMG_SUBMIT_ID ---"
+                xcrun notarytool log "$DMG_SUBMIT_ID" \
+                  --apple-id "$APPLE_ID" \
+                  --password "$APPLE_ID_PWD" \
+                  --team-id "$APPLE_TEAM_ID" || true
+                exit 1
+                ;;
+            esac
+          done
+
+          if [ "$DMG_STATUS" != "Accepted" ]; then
+            echo "::error::Timed out waiting for DMG notarization (last status: ${DMG_STATUS:-unknown})"
             exit 1
           fi
           xcrun stapler staple LibreRadio-macOS.dmg
@@ -184,5 +260,6 @@ jobs:
         if: always()
         run: |
           rm -f "$RUNNER_TEMP/certificate.p12"
-          rm -f "$RUNNER_TEMP/notarization.log" "$RUNNER_TEMP/dmg-notarization.log"
+          rm -f "$RUNNER_TEMP/notarization.log" "$RUNNER_TEMP/notarization-info.log" \
+                "$RUNNER_TEMP/dmg-notarization.log" "$RUNNER_TEMP/dmg-notarization-info.log"
           security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" 2>/dev/null || true
