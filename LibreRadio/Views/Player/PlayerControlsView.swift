@@ -62,10 +62,12 @@ struct PlayerControlsView: View {
             }
             .padding(.horizontal)
 
+            #if !targetEnvironment(macCatalyst)
             if playerVM.audioService.hasExternalRoutes {
                 AirPlayButton()
                     .frame(width: 36, height: 36)
             }
+            #endif
         }
     }
 }

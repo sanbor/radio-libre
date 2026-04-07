@@ -308,7 +308,7 @@ final class AudioPlayerService: ObservableObject {
     // MARK: - Route Change Handling
 
     private func setupRouteDetector() {
-        #if !targetEnvironment(simulator)
+        #if !targetEnvironment(simulator) && !targetEnvironment(macCatalyst)
         routeDetector.isRouteDetectionEnabled = true
         hasExternalRoutes = routeDetector.multipleRoutesDetected
         routeDetectorObservation = routeDetector.observe(\.multipleRoutesDetected, options: [.new]) { [weak self] _, change in

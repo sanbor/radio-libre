@@ -1415,7 +1415,8 @@ Triggers on tag push matching `v*`. Steps:
 **Mac Catalyst enablement:**
 - `project.yml` uses `supportedDestinations: [iOS, macCatalyst]` instead of `platform: iOS`
 - `CarPlaySceneDelegate.swift` is wrapped in `#if canImport(CarPlay)` since CarPlay framework is unavailable on Mac Catalyst
-- No other code changes needed — UIKit, AVFoundation, MediaPlayer all work on Mac Catalyst
+- `AirPlayButton.swift` (AVRoutePickerView wrapper) is wrapped in `#if !targetEnvironment(macCatalyst)` — AVRoutePickerView causes a UIKit focus system assertion crash on Mac Catalyst. macOS handles audio routing via system menu bar/Control Center. Usage sites in `MiniPlayerView` and `PlayerControlsView` are also guarded. `AudioPlayerService.setupRouteDetector()` skips route detection on Catalyst since the AirPlay button is hidden.
+- Sheets on Mac Catalyst do **not** inherit `environmentObject` from their parent view hierarchy (unlike iOS). All `.sheet()` presentations must explicitly pass required environment objects. `RootTabView` passes `playerVM` and `favoritesVM` to the `FullPlayerView` sheet.
 
 **Implementation notes (CI/CD):**
 - Mac Catalyst build compiles cleanly with no code changes beyond the CarPlay guard. All UIKit APIs used in the project are available on Mac Catalyst.

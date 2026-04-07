@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootTabView: View {
     @EnvironmentObject private var playerVM: PlayerViewModel
+    @EnvironmentObject private var favoritesVM: FavoritesViewModel
     @EnvironmentObject private var networkMonitor: NetworkMonitorService
 
     @State private var showFullPlayer = false
@@ -43,6 +44,8 @@ struct RootTabView: View {
         }
         .sheet(isPresented: $showFullPlayer) {
             FullPlayerView()
+                .environmentObject(playerVM)
+                .environmentObject(favoritesVM)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if !networkMonitor.isConnected {

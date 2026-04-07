@@ -542,6 +542,8 @@ Sidebar navigation with `NavigationSplitView` replacing the tab bar on iPad. Sid
 
 Menu bar player with a popover showing the mini player and quick access to favorites. Full window with sidebar navigation matching the iPad layout. Native keyboard shortcuts for playback control.
 
+**Platform differences:** The AirPlay route picker (`AVRoutePickerView`) is excluded on Mac Catalyst — it causes a UIKit focus system crash, and macOS handles audio routing via the system menu bar / Control Center.
+
 #### CI/CD
 
 - **iOS CI** (`.github/workflows/ios.yml`): builds and tests on push/PR to `main`

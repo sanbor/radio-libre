@@ -86,9 +86,11 @@ struct MiniPlayerView: View {
                     nextButton
                     moreMenu(station: station)
                     volumeButton
+                    #if !targetEnvironment(macCatalyst)
                     if playerVM.audioService.hasExternalRoutes {
                         airPlayButton
                     }
+                    #endif
                 }
             }
         }
@@ -264,11 +266,13 @@ struct MiniPlayerView: View {
         return "speaker.wave.3.fill"
     }
 
+    #if !targetEnvironment(macCatalyst)
     private var airPlayButton: some View {
         AirPlayButton()
             .frame(width: 44, height: 44)
             .accessibilityLabel("AirPlay")
     }
+    #endif
 
     // MARK: - Subtitle
 

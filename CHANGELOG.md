@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-04-07 — Fix macOS crash when clicking Now Playing section
+
+**Prompt:** `/implement the macos version breaks when clicking the playing now section. check @dump.txt for the stacktrace`
+
+**Changes:**
+- Fixed Mac Catalyst crash caused by `AVRoutePickerView` triggering a UIKit focus system assertion failure (`_UIFocusContainerGuideFallbackItemsContainer`)
+- Wrapped `AirPlayButton.swift` in `#if !targetEnvironment(macCatalyst)` to exclude the `AVRoutePickerView` wrapper on Mac Catalyst
+- Guarded AirPlay button usage in `MiniPlayerView.swift` and `PlayerControlsView.swift` with the same compile-time check
+- Skipped `AVRouteDetector` setup on Mac Catalyst in `AudioPlayerService.swift` since the AirPlay button is hidden
+- Fixed second crash: explicitly pass `environmentObject` to `FullPlayerView` sheet in `RootTabView` — on Mac Catalyst, sheets don't inherit environment objects from parent views
+- macOS handles audio routing via system menu bar / Control Center, so in-app route picker is unnecessary
+- Added `MacCatalystGuardTests` (5 tests): source-level regression tests verifying `#if !targetEnvironment(macCatalyst)` guards and explicit environment object injection remain in place
+- Added `RootTabViewTests` (5 tests): view instantiation tests for `RootTabView`, `FullPlayerView`, `MiniPlayerView`, and `PlayerControlsView`
+
 ## 2026-04-04 — macOS release workflow on tag publish
 
 **Prompt:** `/implement release macos version on github when publishing a tag`

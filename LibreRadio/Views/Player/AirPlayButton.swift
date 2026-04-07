@@ -1,3 +1,4 @@
+#if !targetEnvironment(macCatalyst)
 import AVKit
 import SwiftUI
 
@@ -20,3 +21,4 @@ struct AirPlayButton: UIViewRepresentable {
 
     func updateUIView(_ uiView: UIView, context: Context) {}
 }
+#endif
