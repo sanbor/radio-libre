@@ -324,6 +324,9 @@ LibreRadio/
 │   │   ├── Recent/
 │   │   │   └── RecentStationsView.swift         # Recent stations list, relative timestamps, clear all
 │   │   │
+│   │   ├── About/
+│   │   │   └── AboutView.swift                  # Static sheet: attribution + radio-browser.info license (App Review 5.2.3)
+│   │   │
 │   │   ├── Player/
 │   │   │   ├── MiniPlayerView.swift             # Sticky bottom bar: favicon, name, play/pause
 │   │   │   ├── FullPlayerView.swift             # Sheet: large artwork, controls, station info, tags
@@ -1306,6 +1309,14 @@ struct LibreRadioApp: App {
 13. SwiftData `VersionedSchema` for migration readiness
 14. `ServerStats.swift` model + optional stats view
 15. Performance profiling with Instruments
+16. `AboutView.swift` — static info sheet presented from the Home toolbar, containing the verbatim radio-browser.info public-domain declaration and attribution links.
+
+**Implementation notes (About screen, 2026-04-11):**
+- **Purpose:** surface attribution to radio-browser.info and quote its public-domain data license verbatim so users can see exactly where station data comes from and under what terms. **Do not paraphrase or edit the quoted license text** — faithful reproduction is the whole point of the section.
+- **Placement:** info.circle button on the Home tab's top-right toolbar, presenting `AboutView` as a sheet. Rejected adding a 6th tab because the iOS tab bar collapses into a "More" tab beyond 5 items.
+- **Content sourcing:** The non-legal copy (intro blurb, attribution acknowledgements, GitHub/contact links) is derived from `README.md` so the repo README and the in-app About screen stay aligned. When updating attribution in one place, update the other.
+- **View shape:** fully static — no ViewModel, no async work, no environment-object dependencies. The only non-trivial logic is the version-string helper `aboutVersionString(shortVersion:build:)` which is a file-level free function extracted specifically so its three branches (both present / only short version / neither) can be unit-tested without touching `Bundle.main`.
+- **SourceKit false positives:** while editing, SourceKit reported that `.insetGrouped`, `.navigationBarTitleDisplayMode`, and `.topBarTrailing` are "unavailable on macOS." These are false positives — they are available on macCatalyst and are used successfully in `FavoritesView.swift`, `RecentStationsView.swift`, and `TrackHistorySheet.swift`. Ignore these diagnostics; the real `xcodebuild` pass validates correctness.
 
 ### Phase 7: Testing
 **Goal:** Automated test coverage for services and view models.

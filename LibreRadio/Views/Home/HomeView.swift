@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @EnvironmentObject private var playerVM: PlayerViewModel
+    @State private var showAbout = false
 
     var body: some View {
         NavigationStack {
@@ -20,6 +21,19 @@ struct HomeView: View {
             .navigationTitle("Home")
             .task { await viewModel.load() }
             .refreshable { await viewModel.refresh() }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showAbout = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                    }
+                    .accessibilityLabel("About LibreRadio")
+                }
+            }
+            .sheet(isPresented: $showAbout) {
+                AboutView()
+            }
         }
     }
 

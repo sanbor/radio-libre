@@ -101,7 +101,7 @@ A mini player bar sits above the tab bar. Always visible with an idle state when
 
 ## Home
 
-Shows curated station sections at a glance.
+Shows curated station sections at a glance. The top-right toolbar includes an `info.circle` button that presents the **About** sheet (see [About](#about)).
 
 | Section | Source | Limit | Layout | Condition |
 |---|---|---|---|---|
@@ -470,6 +470,25 @@ No Combine observers or NotificationCenter — data sets are small and service c
 ### Configuration
 
 Requires `CPTemplateApplicationSceneSessionRoleApplication` in `UISceneConfigurations` (Info.plist) and the `com.apple.developer.carplay-audio` entitlement when code signing is enabled.
+
+---
+
+## About
+
+A static, read-only sheet presented from the `info.circle` button in the Home tab's top-right toolbar. Its primary purpose is to make LibreRadio's attribution to radio-browser.info visible and to serve as **in-app documentary evidence for Apple App Review (Guideline 5.2.3)** that LibreRadio has permission to use the Radio Browser API and data.
+
+**Presentation:** modal sheet, `NavigationStack`, inline title "About", `Done` button (top-trailing) dismisses.
+
+**Sections (in order):**
+
+1. **Banner** (no header) — antenna SF Symbol, "LibreRadio", version string (`CFBundleShortVersionString (CFBundleVersion)`, or `"—"` when unavailable), tagline "Free and open-source internet radio".
+2. **About LibreRadio** — short description of the app (zero ads/trackers/telemetry, GPL-3.0, iOS counterpart to RadioDroid).
+3. **Data Source** — statement that LibreRadio uses radio-browser.info, plus a `Visit radio-browser.info` link.
+4. **Data License** *(legal/attribution-critical)* — explanation that all data used by LibreRadio is public domain per the radio-browser.info project, followed by the **verbatim public-domain declaration** from radio-browser.info's homepage rendered as a styled blockquote with a trailing `— radio-browser.info` attribution, plus a `View license on radio-browser.info` link. **The verbatim quote must not be paraphrased or edited** — it exists specifically so an App Review screenshot of this single screen suffices as evidence.
+5. **Attribution** — acknowledgements derived from `README.md`: radio-browser.info donation/contribution links, RadioDroid inspiration link, GNU meditating Gnu icon attribution link.
+6. **LibreRadio** — GPL-3.0 notice plus `View on GitHub`, `Report an Issue`, and `Contact` (mailto) links.
+
+**Behavior:** the view is fully static — no ViewModel, no network calls, no environment-object dependencies. All links open externally via SwiftUI `Link`. The version string is computed by the free function `aboutVersionString(shortVersion:build:)`, extracted from the view so its three branches (both present / only short version / neither) can be unit-tested without touching `Bundle.main`.
 
 ---
 

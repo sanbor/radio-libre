@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-04-11 — Add About screen with radio-browser.info attribution
+
+**Prompt:** `/implement add a more section where states libreradio uses information provided by radio-browser.info and radio-browser.info data license. [Image #3] [Image #4]`
+
+**Changes:**
+- `LibreRadio/Views/About/AboutView.swift` (new): static `NavigationStack` sheet with six sections — banner (app name + version + tagline), About LibreRadio, Data Source (with link), Data License (verbatim public-domain declaration from radio-browser.info's homepage, rendered as a styled blockquote with attribution footer), Attribution (radio-browser.info donation/contribution + RadioDroid + GNU meditating Gnu icon credits), and LibreRadio (GPL-3.0 + GitHub/Issues/Contact links). Version string is computed via a file-level free function `aboutVersionString(shortVersion:build:)` so its branches are unit-testable without touching `Bundle.main`.
+- `LibreRadio/Views/Home/HomeView.swift`: added an `info.circle` toolbar button (top-trailing) with accessibility label "About LibreRadio" that presents `AboutView` as a sheet via `@State private var showAbout`. No other changes to HomeView.
+- `LibreRadioTests/Views/AboutViewTests.swift` (new): smoke test for `AboutView` instantiation plus five `aboutVersionString` branch tests (both present, multi-digit build, short-version only, short-version missing, both missing).
+- `SPEC.md`: added an **About** subsection under the main app structure sections, documenting the info button placement and sheet contents. Referenced from the Home section.
+- `PLAN.md`: added `LibreRadio/Views/About/AboutView.swift` to the file-structure tree, appended a Phase 6 line item for the About screen, and added an implementation notes block capturing the placement rationale (no 6th tab), the README-as-source-of-truth rule, and the SourceKit false-positive diagnostics for macCatalyst-available APIs.
+
+**Design decisions:**
+- **No 6th tab** — the iOS tab bar already holds 5 tabs, which is the maximum before iOS auto-collapses into a "More" tab. An info button on the Home tab (the default landing screen) is maximally discoverable while staying out of the primary navigation.
+- **Verbatim quote** — the radio-browser.info public-domain declaration is quoted exactly as published on the homepage so attribution is faithful to the source.
+- **Static view, no ViewModel** — the About screen has no dynamic state, no network calls, and no environment-object dependencies.
+
+**Verification:**
+- `xcodegen generate` regenerated the project; `xcodebuild ... build` completed with only benign stale-artifact warnings.
+- Full test suite: **447 tests passed, 0 failures** (6 new `AboutViewTests` included).
+
 ## 2026-04-10 — Log dropped metadata items with unrecognized identifiers
 
 **Prompt:** `/implement add a debug log when MetadataOutputHandler drops an item with an unrecognized identifier`
