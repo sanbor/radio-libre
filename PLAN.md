@@ -1407,7 +1407,7 @@ These features can be added after the core app is stable:
 6. **Geo Search** — find stations near current location
 7. **M3U Export/Import** — share favorites as playlist files
 8. **iPad Layout** — sidebar navigation with split view
-9. **macOS (Catalyst/native)** — menu bar player
+9. ~~**macOS (Catalyst/native)** — menu bar player~~ — **Done.** See [Menu Bar Player (Mac Catalyst)](#menu-bar-player-mac-catalyst) section below.
 
 ---
 
@@ -1435,3 +1435,44 @@ Triggers on tag push matching `v*`. Steps:
 - Mac Catalyst build compiles cleanly with no code changes beyond the CarPlay guard. All UIKit APIs used in the project are available on Mac Catalyst.
 - The `ditto -c -k --keepParent` command is preferred over `zip` on macOS because it preserves resource forks and extended attributes in the .app bundle.
 - `--generate-notes` on `gh release create` auto-generates release notes from commits since the previous tag.
+
+### Menu Bar Player (Mac Catalyst)
+
+**File:** `LibreRadio/Services/MenuBarService.swift` (~430 lines)
+
+Adds an `NSStatusItem` to the macOS menu bar on Mac Catalyst. Because `import AppKit` is unavailable in Catalyst, all AppKit access is done via the Objective-C runtime: `NSClassFromString`, `class_createInstance`, `object_getClass`, KVC (`setValue(_:forKey:)`), and typed `@convention(c)` function pointers for methods with primitive (CGFloat, Bool) or selector arguments.
+
+**File structure (single file, three layers):**
+- **Platform-agnostic (compiled on all platforms):**
+  - `struct MenuBarState` — pure data snapshot of menu contents. Has computed helpers: `playPauseTitle`, `playPauseEnabled`, `stopEnabled`, `volumePresetIndex`.
+  - `enum MenuBarStateBuilder` — `@MainActor static func compute(playerVM:favoritesVM:)` derives `MenuBarState` from current app state.
+- **Mac Catalyst only (`#if targetEnvironment(macCatalyst)`):**
+  - `private enum AppKitBridge` — thin runtime wrappers around `NSStatusBar`, `NSStatusItem`, `NSImage`, `NSMenu`, `NSMenuItem`, `NSApplication`.
+  - `@MainActor final class MenuBarService: NSObject` — singleton (`.shared`), sets up the status item once, rebuilds the menu in `menuNeedsUpdate:`, and handles action targets (`@objc` methods for toggle/stop/playFavorite/setVolume/showMainWindow).
+
+**Wiring:** `LibreRadioApp.swift` calls `MenuBarService.shared.setup(playerVM:favoritesVM:)` inside its `.task` block, guarded by `#if targetEnvironment(macCatalyst)`. The setup is idempotent (`isSetUp` flag) so duplicate calls are no-ops.
+
+**NSMenu over NSPopover:** The original spec mentioned "popover with mini player." NSPopover would require embedding SwiftUI via `NSHostingView` which needs significantly more AppKit bridging. NSMenu gives the same functionality (playback controls, favorites list, volume presets) with far less bridging surface area. Popover with SwiftUI host is a v2 enhancement.
+
+**Menu delegate pattern:** Rather than formally conforming to `NSMenuDelegate` (the protocol is AppKit-only and not importable in Catalyst), `MenuBarService` declares `@objc func menuNeedsUpdate(_ menu: AnyObject)` and is assigned as the menu's delegate via `menu.setValue(self, forKey: "delegate")`. The AppKit runtime dispatches the message via the ObjC selector, no formal conformance required.
+
+**Menu is rebuilt on every open:** No state observation (no AsyncStream or KVO subscriptions). The menu is torn down and reconstructed inside `menuNeedsUpdate:` each time the user clicks the status icon. This avoids cache invalidation bugs and keeps the implementation small. The slight cost (~30 menu items rebuilt) is negligible.
+
+**Runtime patterns that matter:**
+- `class_createInstance(cls, 0) as? NSObject` — creates an uninitialized instance; we then call `initWithTitle:...` via a typed IMP. Using `cls.alloc()` fails to typecheck because `NSClassFromString` returns `AnyClass?` and Swift's `.alloc()` on a bare `AnyClass` returns `Any!` which doesn't satisfy the `NSObject` parameter type of `@convention(c)` function pointers.
+- Class methods (like `NSMenuItem.separatorItem`, `NSImage.imageWithSystemSymbolName:accessibilityDescription:`) require `object_getClass(cls)` + `class_getMethodImplementation(metaclass, sel)` to find the IMP, then invoke with `cls` as the receiver.
+- KVC (`setValue(_:forKey:)`) works for most properties: `title`, `target`, `tag`, `isEnabled`, `state`, `submenu`, `image`, `autoenablesItems`, `delegate`, `button`, `menu`. For `action`, the Selector is set via the init method (`initWithTitle:action:keyEquivalent:`) because KVC + SEL is fragile across Swift/ObjC bridging.
+
+**Implementation notes (Menu Bar Player):**
+- **Isolation traps:** `MenuBarStateBuilder.compute` reads `audioService.volume`, which is on `@MainActor` because `AudioPlayerService` is a `@MainActor` type. So `compute` must also be `@MainActor`. And test methods that call it need `@MainActor` — I annotate the whole test class (`@MainActor final class MenuBarServiceTests: XCTestCase`) rather than per-method.
+- **`cls.alloc()` typechecks in Catalyst but not in Foundation-only modules:** The first implementation tried `cls.alloc()` directly; the iOS-simulator build passed because the Catalyst-only block never compiled on iOS. When the Catalyst build ran, it produced errors like "'AnyObject' is not convertible to 'NSObject'". Switched to `class_createInstance(cls, 0) as? NSObject` which is explicit and portable.
+- **Separator items are class methods, not instance properties.** Must use `object_getClass` to get the metaclass and look up the IMP there, then call with `cls` as receiver. Using `cls.perform(NSSelectorFromString("separatorItem"))` does not typecheck because `AnyClass` does not expose `perform` without casting.
+- **`#if targetEnvironment(macCatalyst)` at source level is visible to tests via string matching.** The `MacCatalystGuardTests.swift` test verifies the setup call exists in `LibreRadioApp.swift` to prevent regressions.
+- **Tag 0 is indistinguishable from "tag not set":** `createMenuItem` only assigns `tag` via KVC when non-zero (NSMenuItem's default tag is 0 anyway). First favorite (index 0) and first volume preset (Mute, index 0) both use default tag 0. This works correctly because `tag: 0` yields tag 0, and `sender.value(forKey: "tag") as? Int == 0` selects index 0.
+- **Menu is built eagerly at setup AND rebuilt via the `menuNeedsUpdate:` delegate.** The initial eager build guarantees that clicking the status icon shows a populated menu even if the delegate callback is somehow missed. The delegate rebuild keeps state fresh on each open.
+- **Runtime bridge is stringly-typed — needs runtime tests on Catalyst destination.** `MenuBarBridgeTests.swift` (guarded by `#if targetEnvironment(macCatalyst)`) exercises every `AppKitBridge` method and runs an integration smoke test that calls `MenuBarService.shared.setup(...)` and verifies the attached menu is non-empty after rebuild. Run via `xcodebuild -scheme LibreRadio -destination 'platform=macOS,variant=Mac Catalyst' test`.
+
+**Gotchas discovered during first Mac Catalyst run (caught by the bridge tests):**
+- **Swift rename ≠ Objective-C selector.** `NSStatusBar.system` is the Swift name; the underlying ObjC class method is `+systemStatusBar`. Using `"system"` with class-level KVC raised `NSUnknownKeyException`. Runtime lookups must use the ObjC name (`systemStatusBar`). The same applies to any `NS_SWIFT_NAME`-renamed API.
+- **KVC setter key = property name, not getter name.** NSMenuItem is `@property(getter=isEnabled) BOOL enabled` — the KVC key for `setValue(_:forKey:)` is `"enabled"` (maps to `setEnabled:`), not `"isEnabled"` (which would look for the non-existent `setIsEnabled:`). Getter-renamed boolean properties are the common landmine.
+- **Class-method lookups need metaclass + IMP, not `cls.perform`.** For `+separatorItem`, `+systemStatusBar`, etc., use `object_getClass(cls)` then `class_getMethodImplementation(metaclass, sel)` and cast to `@convention(c) (AnyClass, Selector) -> AnyObject?`. `cls.value(forKey:)` works for some class properties (like `+[NSApplication sharedApplication]`) only because the ObjC method name happens to match the expected KVC key.

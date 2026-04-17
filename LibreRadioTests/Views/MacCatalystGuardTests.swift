@@ -61,6 +61,16 @@ final class MacCatalystGuardTests: XCTestCase {
         )
     }
 
+    // MARK: - MenuBarService setup guard
+
+    func testLibreRadioAppSetsUpMenuBarOnCatalyst() throws {
+        let source = try readSource("LibreRadio/App/LibreRadioApp.swift")
+        XCTAssertTrue(
+            source.contains("MenuBarService.shared.setup"),
+            "LibreRadioApp must call MenuBarService.shared.setup on Mac Catalyst for menu bar player"
+        )
+    }
+
     // MARK: - Helpers
 
     /// Locates and reads a source file relative to the project root.

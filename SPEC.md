@@ -561,6 +561,19 @@ Sidebar navigation with `NavigationSplitView` replacing the tab bar on iPad. Sid
 
 Menu bar player with a popover showing the mini player and quick access to favorites. Full window with sidebar navigation matching the iPad layout. Native keyboard shortcuts for playback control.
 
+**Menu bar status item (Mac Catalyst):** An `NSStatusItem` with an antenna SF Symbol (`antenna.radiowaves.left.and.right`) is installed on app launch. Clicking the icon opens a dropdown `NSMenu` rebuilt on every open via `menuNeedsUpdate:`.
+
+Menu layout:
+- **Station info row** (disabled) — current station name, or "No Station Playing" when idle.
+- **Track info row** (disabled, only shown when track metadata is available) — prefixed with "♫ ", formatted as "Artist — Title" or just "Title" if artist is unknown.
+- **Connecting…** (disabled, only shown during loading).
+- **Error: \<message\>** (disabled, only shown when the stream fails) — displays the error description so the user knows why playback stopped.
+- **Play / Pause** — toggles playback. Disabled while loading.
+- **Stop** — stops playback. Disabled while idle. Enabled in error state so the user can clear a failed station.
+- **Favorites** submenu — lists every favorited station. Shows a disabled "No Favorites" item when empty. The currently playing favorite is marked with a checkmark (`NSControlStateValueOn`). Selecting a favorite plays it in a favorites `PlaybackContext`.
+- **Volume** submenu — five presets (Mute, 25%, 50%, 75%, 100%). The preset closest to the current volume is checkmarked. Selecting a preset sets `audioService.volume`.
+- **Show LibreRadio** — brings the app window to the foreground and reopens it if it was closed, via `NSApplication.activateIgnoringOtherApps:` + `UIApplication.requestSceneSessionActivation`.
+
 **Platform differences:** The AirPlay route picker (`AVRoutePickerView`) is excluded on Mac Catalyst — it causes a UIKit focus system crash, and macOS handles audio routing via the system menu bar / Control Center.
 
 #### CI/CD

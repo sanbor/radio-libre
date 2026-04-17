@@ -1,5 +1,34 @@
 # Changelog
 
+## 2026-04-15 — Add macOS menu bar player (Mac Catalyst)
+
+**Prompt:** `/implement for macOS version implement a menu bar player`
+
+**Changes:**
+- `LibreRadio/Services/MenuBarService.swift` (new, ~430 lines): adds an `NSStatusItem` with an antenna SF Symbol (`antenna.radiowaves.left.and.right`) to the macOS menu bar on Mac Catalyst. Clicking opens a dropdown `NSMenu` rebuilt on every open via `menuNeedsUpdate:`. Menu shows station info, track info (when metadata available), Play/Pause, Stop, a Favorites submenu (with checkmark on currently-playing favorite), a Volume submenu (five presets: Mute/25%/50%/75%/100%, closest preset checkmarked), and "Show LibreRadio" which activates the app. All AppKit access is via the Objective-C runtime (`NSClassFromString`, `class_createInstance`, typed `@convention(c)` function pointers, KVC) because `import AppKit` is unavailable in Catalyst.
+- `LibreRadio/Services/MenuBarService.swift` exposes `struct MenuBarState` and `enum MenuBarStateBuilder` (both platform-agnostic) so the menu-state derivation logic is unit-testable on iOS Simulator without an AppKit runtime.
+- `LibreRadio/App/LibreRadioApp.swift`: calls `MenuBarService.shared.setup(playerVM:favoritesVM:)` inside the root `.task` block, guarded by `#if targetEnvironment(macCatalyst)`. Setup is idempotent via an `isSetUp` flag.
+- `LibreRadioTests/Services/MenuBarServiceTests.swift` (new): 16 tests covering idle/playing/loading/paused state transitions, volume preset snap-to-closest (including the boundary cases 0.12→Mute and 0.13→25%), favorites population/empty, track info formatting with and without artist, and builder behavior with nil view models.
+- `LibreRadioTests/Services/MenuBarBridgeTests.swift` (new): 11 runtime tests gated by `#if targetEnvironment(macCatalyst)` that exercise every `AppKitBridge` method (systemStatusBar, createStatusItem, createMenu, createMenuItem, separatorItem, systemImage, setEnabled/setState/setSubmenu KVC, addItem/removeAllItems) plus an integration smoke test (`testMenuBarServiceSetupProducesNonEmptyMenu`) that calls `MenuBarService.shared.setup()` and verifies the attached menu has items after rebuild. Runs via `xcodebuild -destination 'platform=macOS,variant=Mac Catalyst' test`.
+- `LibreRadioTests/Views/MacCatalystGuardTests.swift`: added `testLibreRadioAppSetsUpMenuBarOnCatalyst` regression test verifying the setup call exists in `LibreRadioApp.swift`.
+
+**Bugs caught by the new Mac Catalyst runtime tests (and fixed):**
+- `systemStatusBar()` initially used `cls.value(forKeyPath: "system")` — the Swift rename, not the ObjC selector. At runtime this raised `NSUnknownKeyException: [NSStatusBar ... valueForUndefinedKey:]: this class is not key value coding-compliant for the key system`. Fixed to call `+[NSStatusBar systemStatusBar]` via `class_getMethodImplementation` on the metaclass.
+- `setEnabled(_:on:)` used `setValue(enabled, forKey: "isEnabled")` on NSMenuItem. The property is `@property(getter=isEnabled) BOOL enabled`, so the KVC setter key must be `"enabled"` (maps to `setEnabled:`), not `"isEnabled"` (which would look for the non-existent `setIsEnabled:`). Fixed.
+- Clicking the status icon did nothing on first run because the menu was only built lazily via the `menuNeedsUpdate:` delegate callback, and the callback wasn't firing reliably on first click. Changed `MenuBarService.setup()` to eagerly populate the menu with initial state immediately after creating it — the delegate rebuild still fires for live updates.
+- `SPEC.md`: added a detailed menu bar layout specification under the macOS (Catalyst or native) section.
+- `PLAN.md`: marked Phase 9 (macOS menu bar) as done, added a full "Menu Bar Player (Mac Catalyst)" section documenting architecture, runtime patterns, NSMenu-vs-NSPopover decision, and implementation notes (isolation traps, `cls.alloc()` typecheck failure on Catalyst, separator item metaclass pattern, tag-0-ambiguity behavior).
+
+**Design decisions:**
+- **NSMenu over NSPopover** — the spec mentioned "popover with mini player," but NSPopover requires embedding SwiftUI via `NSHostingView` which needs significantly more AppKit bridging. NSMenu gives the same functionality with far less surface area. SwiftUI-hosted popover is a v2 enhancement.
+- **Runtime AppKit access, no plugin bundle** — Apple's official recommendation for Catalyst+AppKit integration is a separate AppKit plugin bundle with NotificationCenter IPC. We chose direct runtime access instead: simpler (single file), no XcodeGen changes, direct access to `PlayerViewModel.shared` and `FavoritesViewModel`.
+- **Menu rebuilt on every open** — no state-change observation. `menuNeedsUpdate:` tears down and reconstructs ~15–20 menu items on each click. Avoids cache-invalidation bugs; negligible cost.
+
+**Verification:**
+- `xcodegen generate` regenerated the project.
+- iOS Simulator build + full test suite (465 tests) pass with no failures.
+- Mac Catalyst build succeeds.
+
 ## 2026-04-11 — Add About screen with radio-browser.info attribution
 
 **Prompt:** `/implement add a more section where states libreradio uses information provided by radio-browser.info and radio-browser.info data license. [Image #3] [Image #4]`

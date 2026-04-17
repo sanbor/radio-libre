@@ -18,6 +18,9 @@ struct LibreRadioApp: App {
                     NowPlayingService.shared.setFavoritesViewModel(favoritesVM)
                     await ServerDiscoveryService.shared.resolveIfNeeded()
                     await favoritesVM.load()
+                    #if targetEnvironment(macCatalyst)
+                    MenuBarService.shared.setup(playerVM: playerVM, favoritesVM: favoritesVM)
+                    #endif
                 }
         }
     }
